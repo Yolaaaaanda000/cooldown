@@ -47,50 +47,62 @@ npm start
 ```javascript
 // ===== BreakCard 微健身抽卡 =====
 // 注：path 已在文件顶部 require（~line 70），BrowserWindow / ipcMain 已在顶部从 electron 解构（line 1），此处不再重复 require。
+const { powerMonitor } = require("electron"); // 系统空闲时长：判断你是不是真停下来了
 let breakWin = null;
 let lastBreakShown = 0;
-let busyTimer = null;  // 持续忙够 MIN_BUSY_MS 还没停 → 弹卡（边等边练）
-const BUSY_STATES = new Set(["thinking", "working"]); // Claude 的忙碌态是 thinking/working，不是单一 working
+let busyStart = 0;      // 本轮“忙”的起点
+let busyPoll = null;    // 忙碌期间的轮询句柄
+const BUSY_STATES = new Set(["thinking", "working"]); // Claude 的忙碌态是 thinking/working
 let userGoal = "strength";              // lose | strength | stretch，之后接 settings
 
 // ===== 弹卡时机：读 design/triggers.json（Claire 拥有的配置），失败则用默认值 =====
-let _bc = { minBusySec: 30, cooldownMin: 15, skipDuringStates: ["notification", "error", "sleeping"], enabled: true };
+let _bc = { minBusySec: 75, idleSec: 15, cooldownMin: 40, activeHours: { start: 8, end: 22 }, skipDuringStates: ["notification", "error", "sleeping"], enabled: true };
 try {
   const _t = JSON.parse(require("fs").readFileSync(path.join(__dirname, "..", "design", "triggers.json"), "utf8"));
   _bc = { ..._bc, ...((_t.interventions && _t.interventions.breakcard) || {}) };
 } catch (e) { console.warn("[breakcard] triggers.json 读取失败，用默认值:", e.message); }
-const MIN_BUSY_MS       = (_bc.minBusySec ?? 30) * 1000;        // 持续忙这么久还没回 idle，才判定"你在干等"
-const BREAK_COOLDOWN_MS = (_bc.cooldownMin ?? 15) * 60 * 1000;  // 两次弹出至少间隔
+const MIN_BUSY_MS       = (_bc.minBusySec ?? 75) * 1000;        // agent 连续忙这么久才算“真长任务”
+const IDLE_SEC          = _bc.idleSec ?? 15;                    // 你输入静止这么久才算“真停下来在干等”
+const BREAK_COOLDOWN_MS = (_bc.cooldownMin ?? 40) * 60 * 1000;  // 两次弹出至少间隔
+const ACTIVE_START      = (_bc.activeHours && _bc.activeHours.start) ?? 8;  // 只在活跃时段弹
+const ACTIVE_END        = (_bc.activeHours && _bc.activeHours.end) ?? 22;
 const SKIP_STATES       = new Set(_bc.skipDuringStates || []);  // 这些状态下不弹（该你处理，不是运动时机）
 const BC_ENABLED        = _bc.enabled !== false;
 
-// 方案 B：agent 持续忙（thinking/working）超过 MIN_BUSY_MS 还没回 idle，说明是长任务、你正干等 → 弹卡。
-// 中途回 idle 则取消（短任务不打扰）。attention / notification 会在任务中途乱闪，一律忽略、不影响计时。
+function withinActiveHours() {
+  const h = new Date().getHours();
+  return ACTIVE_START <= ACTIVE_END ? (h >= ACTIVE_START && h < ACTIVE_END)
+                                    : (h >= ACTIVE_START || h < ACTIVE_END); // 跨午夜
+}
+
+// 真等待 = agent 持续忙够 && 你输入静止够（真停下来）&& 活跃时段 && 过冷却。任一不满足就继续等。
+function tryPopBreakCard() {
+  if (breakWin && !breakWin.isDestroyed()) return;             // 卡已开着
+  const now = Date.now();
+  if (now - busyStart < MIN_BUSY_MS) return;                   // 还没忙够
+  if (now - lastBreakShown < BREAK_COOLDOWN_MS) return;        // 冷却中
+  if (!withinActiveHours()) return;                            // 非活跃时段
+  if (powerMonitor.getSystemIdleTime() < IDLE_SEC) return;     // 你还在动，没真停下来（可能在盯着读）
+  showBreakCard();
+  lastBreakShown = now;
+  stopBusyWatch();                                            // 弹了就停轮询
+}
+
+function startBusyWatch() {
+  if (busyPoll) return;                                       // 已在盯
+  busyStart = Date.now();
+  busyPoll = setInterval(tryPopBreakCard, 3000);             // 忙碌期间每 3s 检查一次条件
+}
+function stopBusyWatch() {
+  if (busyPoll) { clearInterval(busyPoll); busyPoll = null; }
+}
+
 function maybeShowBreakCard(prevState, nextState) {
   if (!BC_ENABLED) return;
-  // 该你处理的时刻（权限请求/报错/你已离开）：取消待弹，这不是运动时机
-  if (SKIP_STATES.has(nextState)) {
-    if (busyTimer) { clearTimeout(busyTimer); busyTimer = null; }
-    return;
-  }
-  if (BUSY_STATES.has(nextState)) {
-    // 进入忙碌：计时器没武装、且浮窗没开着，就武装一个
-    if (!busyTimer && !(breakWin && !breakWin.isDestroyed())) {
-      busyTimer = setTimeout(() => {
-        busyTimer = null;
-        if (Date.now() - lastBreakShown >= BREAK_COOLDOWN_MS) {
-          showBreakCard();
-          lastBreakShown = Date.now();
-        }
-      }, MIN_BUSY_MS);
-    }
-    return;
-  }
-  if (nextState === "idle") {
-    // 真正回到空闲：取消待弹（这次没忙够阈值，或卡已弹过）
-    if (busyTimer) { clearTimeout(busyTimer); busyTimer = null; }
-  }
-  // attention 等其它中间态：不动计时器，继续等（notification/error 已在上面 SKIP 掉）
+  if (SKIP_STATES.has(nextState)) { stopBusyWatch(); return; }  // 权限/报错/离开：这不是等待，停
+  if (BUSY_STATES.has(nextState)) { startBusyWatch(); return; } // 进入忙碌：开始盯条件
+  if (nextState === "idle") { stopBusyWatch(); }                // 真闲下来：这轮等待结束
+  // attention 等其它中间态：不动，继续盯
 }
 
 function showBreakCard() {
@@ -175,8 +187,10 @@ function setState(newState, svgOverride, options = {}) {
 
 | 字段 | 含义 | 现值 |
 |---|---|---|
-| `minBusySec` | agent 连续忙满多少秒才弹 | `60` |
-| `cooldownMin` | 两次弹出至少间隔分钟 | `30` |
+| `minBusySec` | agent 连续忙满多少秒才算「真长任务」 | `75` |
+| `idleSec` | 你输入静止多少秒才算「真在等」（不是盯着读） | `15` |
+| `cooldownMin` | 两次弹出至少间隔分钟（无每日上限） | `40` |
+| `activeHours` | 只在这个时段弹（24h 制，start>end 跨午夜） | `{start:8,end:22}` |
 | `skipDuringStates` | 这些状态绝不弹 | `["notification","error","sleeping"]` |
 | `enabled` | 总开关 | `true` |
 

@@ -1,30 +1,42 @@
 {
-  "_说明": "弹卡 / 提醒的时机映射 —— Claire 设计『什么情况 → 给什么干预』，引擎只读这里、不写死。字段含义见 design/README.md。改完需重启 app 生效。",
+  "_说明": "各种干预的触发时机 —— Claire 设计『什么情况 → 给什么干预』，引擎只读这里、不写死。改完需重启 app 生效。每个干预的触发条件是独立的：抽卡看 agent 等待，久坐/喝水看时间，互不影响。",
   "interventions": {
     "breakcard": {
-      "label": "抽卡微健身",
-      "_when": "agent 持续忙（thinking/working）超过 minBusySec 秒还没回 idle —— 说明你在干等一个长任务",
-      "minBusySec": 60,
-      "_note_minBusySec": "agent 连续忙够这么久才弹。短任务（<60s）不打扰。想 demo 时快点看到可临时调小（如 8）",
-      "cooldownMin": 30,
-      "_note_cooldownMin": "两次弹卡至少间隔这么多分钟，避免太频繁",
+      "label": "抽卡微健身（动作卡片）",
+      "_when": "agent 持续忙(thinking/working) ≥ minBusySec 秒，且你输入静止 ≥ idleSec 秒(真停下来在干等)，且在活跃时段，且距上次 ≥ cooldownMin 分钟。以下条件同时满足才弹。",
+      "minBusySec": 75,
+      "_note_minBusySec": "agent 连续忙够这么久才算『真长任务』。60~90 合适。demo 想快点看到改成 8。",
+      "idleSec": 15,
+      "_note_idleSec": "你的鼠标/键盘静止这么久才算『真在等』(而不是正盯着 agent 输出读)。demo 想快点看到改成 3。",
+      "cooldownMin": 40,
+      "_note_cooldownMin": "两次弹卡至少间隔分钟，≥40。无每日次数上限。",
+      "activeHours": { "start": 8, "end": 22 },
+      "_note_activeHours": "只在这个时段弹(24 小时制)，半夜不打扰。start>end 表示跨午夜。",
       "skipDuringStates": ["notification", "error", "sleeping"],
-      "_note_skip": "这些状态下不弹：权限请求 / 报错 / 你已离开 —— 该你处理，不是运动时机",
+      "_note_skip": "这些状态绝不弹：权限请求 / 报错 / 你已离开 —— 该你处理，不是运动时机。",
       "enabled": true
     },
     "sedentary": {
-      "label": "久坐提醒（站起来 / 喝水 / 看远方）",
-      "_when": "你连续 afterMin 分钟没离开座位",
+      "label": "久坐提醒（站起来 / 拉伸 / 看远方）",
+      "_when": "独立触发：你连续久坐 afterMin 分钟(与 agent 在不在忙无关)",
       "afterMin": 50,
+      "cooldownMin": 30,
       "enabled": false,
-      "_note": "⏳ 引擎尚未实现，先占位设计 —— Claire 可先写文案与时长"
+      "_note": "⏳ 引擎尚未实现。触发逻辑跟抽卡不同 —— 看的是『你坐了多久』，不看 agent。Claire 可先写文案与时长。"
+    },
+    "water": {
+      "label": "喝水提醒",
+      "_when": "独立触发：每隔 everyMin 分钟提醒一次",
+      "everyMin": 60,
+      "enabled": false,
+      "_note": "⏳ 引擎尚未实现。纯定时，与 agent / 久坐都无关。"
     },
     "gymPlan": {
       "label": "今日健身房计划提醒",
-      "_when": "每天到 atTime 提醒今天的完整健身计划",
+      "_when": "独立触发：每天到 atTime 提醒今天的完整健身计划",
       "atTime": "18:00",
       "enabled": false,
-      "_note": "⏳ 引擎尚未实现，先占位设计"
+      "_note": "⏳ 引擎尚未实现，先占位设计。"
     }
   }
 }

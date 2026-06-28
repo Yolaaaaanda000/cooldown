@@ -57,8 +57,10 @@
 
 | 字段 | 含义 | 现值 |
 |---|---|---|
-| `minBusySec` | agent 连续忙（thinking/working）满多少秒才弹，过滤短任务 | `60` |
-| `cooldownMin` | 两次弹卡至少间隔多少分钟，防太频繁 | `30` |
+| `minBusySec` | agent 连续忙满多少秒才算「真长任务」 | `75` |
+| `idleSec` | 你输入静止多少秒才算「真在等」（不是盯着 agent 输出读） | `15` |
+| `cooldownMin` | 两次弹卡至少间隔分钟，防太频繁（无每日上限） | `40` |
+| `activeHours` | 只在这个时段弹，半夜不打扰（start>end 跨午夜） | `{start:8,end:22}` |
 | `skipDuringStates` | 这些状态下绝不弹（该你处理，不是运动时机） | `["notification","error","sleeping"]` |
 | `enabled` | 总开关 | `true` |
 
