@@ -213,7 +213,7 @@ function setState(newState, svgOverride, options = {}) {
   } }
 ```
 
-### 三处改动（都在 clawd-on-desk 本地，不入 aigym 仓库）
+### 三处改动（都在 clawd-on-desk 本地，不入 cooldown 仓库）
 1. **preload**（`breakcard/breakcard-preload.js`）——在现有 `notify` 旁加一条带返回的通道：
    ```javascript
    contextBridge.exposeInMainWorld("breakcardAPI", {
@@ -242,7 +242,7 @@ function setState(newState, svgOverride, options = {}) {
 
 ## 比心素材：`clawd-love.svg` —— 完成时螃蟹专属比心
 
-完成运动时引擎调 `setState("love")`，播放专属的「举爱心比心」动画（不是通用 happy）。两步，都在 clawd-on-desk 本地（属 AGPL 运行层，不入 aigym 仓库）：
+完成运动时引擎调 `setState("love")`，播放专属的「举爱心比心」动画（不是通用 happy）。两步，都在 clawd-on-desk 本地（属 AGPL 运行层，不入 cooldown 仓库）：
 1. 放素材：`clawd-on-desk/assets/svg/clawd-love.svg`（像素螃蟹举着心跳爱心 + 小爱心上飘，复用 clawd-happy 的弹跳/眨眼）
 2. 注册状态：`themes/clawd/theme.json` 加
    - `states.love = ["clawd-love.svg"]`

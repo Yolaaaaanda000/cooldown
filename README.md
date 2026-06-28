@@ -23,8 +23,8 @@
 本机装了 `git` / `node` / `npm` 就行：
 
 ```bash
-git clone https://github.com/Yolaaaaanda000/aigym.git
-cd aigym
+git clone https://github.com/Yolaaaaanda000/cooldown.git
+cd cooldown
 ./install.sh      # 自动装好（可重复跑，不会重复注入）
 ./start.sh        # 启动，让小螃蟹上岗
 ```

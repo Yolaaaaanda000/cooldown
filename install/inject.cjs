@@ -6,13 +6,13 @@
      3) themes/clawd/theme.json —— 注册 love 态（完成时比心）
      4) 放 clawd-love.svg + 软链 breakcard/ design/ 进 clawd-on-desk
    锚点找不到会报错退出（多半是 clawd-on-desk 版本与 install.sh 的 PIN 不符）。
-   用法：node inject.js <clawd-on-desk 目录> [aigym 目录] */
+   用法：node inject.cjs <clawd-on-desk 目录> [本仓库目录] */
 const fs = require("fs");
 const path = require("path");
 
 const DEST = process.argv[2];
 const AIGYM = process.argv[3] || path.resolve(__dirname, "..");
-if (!DEST) { console.error("用法: node inject.js <clawd-on-desk-dir> [aigym-dir]"); process.exit(1); }
+if (!DEST) { console.error("用法: node inject.cjs <clawd-on-desk-dir> [repo-dir]"); process.exit(1); }
 
 const read = (p) => fs.readFileSync(p, "utf8");
 const frag = (name) => read(path.join(__dirname, "fragments", name));
