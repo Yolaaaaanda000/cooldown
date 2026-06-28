@@ -62,7 +62,7 @@ clawd-on-desk 是 **AGPL** 协议，所以 `install.sh` 不打包、不分发它
 ---
 
 <p align="center">
-  <img src="design/cooldown.png" alt="Cooldown — 工位手臂拉伸 / 咖啡厅颈部拉伸 / 家里平板支撑。Burn Your Body, Cooldown Your Brain." width="700">
+  <img src="design/cooldown.webp" alt="Cooldown — 工位手臂拉伸 / 咖啡厅颈部拉伸 / 家里平板支撑。Burn Your Body, Cooldown Your Brain." width="700">
 </p>
 
 🦀 动完这一下，螃蟹给你比个心。
