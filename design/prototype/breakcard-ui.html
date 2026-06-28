@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BreakCard · UI 预览 (Neobrutalism)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     BreakCard UI 预览 — Neobrutalism 版
+     粗黑边 + 硬阴影 + 高饱和撞色 + 重磅字。流程同手绘版。
+     纯前端、数据内置、可点击、含 demo 导航。
+     ============================================================ */
+  :root{
+    --bg:#ffd84d;            /* 页面亮黄 */
+    --panel:#fffef6;
+    --ink:#141414;           /* 近黑：边框/阴影/文字 */
+    --pink:#ff5470;
+    --cyan:#39c7ff;
+    --lime:#b6f23e;
+    --purple:#b18cff;
+    --orange:#ff8c3b;
+    --paper2:#fff0d0;
+    --sh:5px 5px 0 var(--ink);
+    --sh-sm:3px 3px 0 var(--ink);
+    --sh-lg:7px 7px 0 var(--ink);
+    --bd:3px solid var(--ink);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    min-height:100%;
+    font-family:"Noto Sans SC","PingFang SC","Helvetica Neue",sans-serif;
+    color:var(--ink);
+    background-color:var(--bg);
+    background-image:radial-gradient(var(--ink) 1.4px, transparent 1.4px);
+    background-size:22px 22px;
+    display:flex; align-items:flex-start; justify-content:center;
+    padding:26px 16px 96px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .heavy{ font-weight:900; letter-spacing:-.3px; }
+
+  /* ---------- 浮窗外框 ---------- */
+  .panel{
+    position:relative; width:408px;
+    background:var(--panel);
+    border:4px solid var(--ink);
+    border-radius:14px;
+    box-shadow:9px 9px 0 var(--ink);
+    overflow:hidden;
+  }
+  .titlebar{
+    display:flex; align-items:center; gap:9px;
+    padding:13px 18px; background:var(--pink);
+    border-bottom:4px solid var(--ink);
+  }
+  .titlebar .crab{ font-size:20px; }
+  .titlebar .name{ font-size:15px; font-weight:900; letter-spacing:.3px; color:#fff;
+    text-shadow:2px 2px 0 var(--ink); }
+  .titlebar .name small{ color:#fff; font-weight:700; margin-left:7px; font-size:11px; opacity:.95; text-shadow:none;}
+  .titlebar .x{ margin-left:auto; width:24px;height:24px; background:#fff; border:2.5px solid var(--ink);
+    border-radius:6px; display:flex;align-items:center;justify-content:center;
+    font-size:13px; font-weight:900; cursor:pointer; box-shadow:2px 2px 0 var(--ink);}
+
+  .screen{ display:none; padding:18px 20px 22px; min-height:548px; }
+  .screen.active{ display:block; animation:fadeIn .3s ease; }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none} }
+
+  /* ================= ① 抽卡主界面 ================= */
+  .ai-banner{
+    display:flex; align-items:center; gap:8px;
+    font-size:12px; font-weight:700; color:var(--ink);
+    background:var(--purple); border:var(--bd); border-radius:10px;
+    padding:9px 12px; margin-bottom:16px; box-shadow:var(--sh-sm);
+    transform:rotate(-1deg);
+  }
+  .ai-banner b{ background:#fff; padding:0 5px; border:2px solid var(--ink); border-radius:5px; }
+
+  .ctx-label{ font-size:11px; letter-spacing:1.5px; font-weight:900; text-transform:uppercase;
+    margin-bottom:9px; }
+  .ctx-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
+  .ctx{
+    font-size:12.5px; font-weight:800; padding:8px 12px; border-radius:9px; cursor:pointer;
+    border:var(--bd); background:#fff; box-shadow:var(--sh-sm); transition:.1s; white-space:nowrap; user-select:none;
+  }
+  .ctx:hover{ transform:translate(-1px,-1px); box-shadow:4px 4px 0 var(--ink); }
+  .ctx.active{ background:var(--cyan); transform:translate(2px,2px); box-shadow:1px 1px 0 var(--ink); }
+
+  .deal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:11px;}
+  .deal-head .h{ font-size:19px; font-weight:900; letter-spacing:-.5px; }
+  .deal-head .sub{ font-size:11px; font-weight:800; background:var(--lime); border:2.5px solid var(--ink);
+    border-radius:7px; padding:3px 8px; box-shadow:2px 2px 0 var(--ink); }
+
+  .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  .slot{ perspective:900px; }
+  .mini{ position:relative; width:100%; aspect-ratio:3/4; cursor:pointer;
+    transform-style:preserve-3d; transition:transform .6s cubic-bezier(.2,.8,.2,1); }
+  .mini .mf{ position:absolute; inset:0; backface-visibility:hidden;
+    border:var(--bd); border-radius:11px; box-shadow:var(--sh-sm);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .mini .mback{ background:var(--cyan); }
+  .mini .mback .ring{ width:44px;height:44px;border:3px solid var(--ink); background:#fff;
+    border-radius:50%; display:flex;align-items:center;justify-content:center; font-size:19px; }
+  .mini .mback .q{ margin-top:8px; font-size:26px; font-weight:900; }
+  .mini .mfront{ transform:rotateY(180deg); background:#fff; padding:8px; text-align:center; }
+  .mini .mfront .e{ font-size:34px; line-height:1; }
+  .mini .mfront .n{ font-size:12px; font-weight:900; margin-top:6px; }
+  .mini.flipped{ transform:rotateY(180deg); }
+  .slot:nth-child(3n+1) .mback{ background:var(--cyan); }
+  .slot:nth-child(3n+2) .mback{ background:var(--lime); }
+  .slot:nth-child(3n) .mback{ background:var(--orange); }
+  .slot:hover .mini:not(.flipped){ transform:translateY(-4px) rotate(-2deg); }
+  .slot.dim{ opacity:.4; }
+  .slot.dealing .mini{ animation:dealIn .45s backwards; }
+  @keyframes dealIn{ from{opacity:0; transform:translateY(16px) scale(.9)} to{opacity:1} }
+
+  .deal-foot{ text-align:center; margin-top:18px; font-size:12px; font-weight:700; }
+  .link{ background:var(--orange); border:2.5px solid var(--ink); border-radius:7px; padding:4px 10px;
+    cursor:pointer; box-shadow:2px 2px 0 var(--ink); display:inline-block; font-weight:900;}
+  .link:hover{ transform:translate(-1px,-1px); }
+
+  /* ================= ② 翻开动作详情 ================= */
+  .reveal-wrap{ display:flex; flex-direction:column; align-items:center; }
+  .big-card{ position:relative; width:272px; min-height:376px; border:4px solid var(--ink);
+    border-radius:14px; background:var(--panel); box-shadow:var(--sh-lg); padding:20px; overflow:hidden;
+    animation:cardPop .45s cubic-bezier(.2,.9,.3,1.2); }
+  @keyframes cardPop{ from{opacity:0; transform:scale(.85) translateY(10px)} to{opacity:1} }
+  .big-card .eyebrow{ display:inline-block; font-size:11px; font-weight:900; letter-spacing:1px;
+    text-transform:uppercase; background:var(--pink); color:#fff; border:2.5px solid var(--ink);
+    border-radius:7px; padding:3px 9px; box-shadow:2px 2px 0 var(--ink); margin-bottom:10px; }
+  .big-card .move{ font-size:32px; font-weight:900; line-height:1.05; letter-spacing:-1px; }
+  .big-card .move-en{ font-size:13px; font-weight:700; color:var(--ink); opacity:.6; margin-top:3px; letter-spacing:.5px;}
+  .big-card .emoji{ font-size:80px; text-align:center; margin:12px 0 8px; animation:bob 2.4s ease-in-out infinite;}
+  @keyframes bob{ 50%{transform:translateY(-6px) rotate(-3deg)} }
+  .big-card .desc{ font-size:13.5px; font-weight:600; line-height:1.6; min-height:60px;}
+  .fit-row{ display:flex; gap:6px; flex-wrap:wrap; margin-top:12px; }
+  .fit{ font-size:10.5px; font-weight:800; padding:3px 8px; border-radius:7px;
+    background:var(--lime); border:2px solid var(--ink); }
+  .meta-row{ display:flex; gap:7px; margin-top:10px; flex-wrap:wrap;}
+  .tag{ font-size:11px; font-weight:800; padding:3px 9px; border-radius:7px; border:2px solid var(--ink); background:#fff;}
+  .tag.goal{ background:var(--orange); }
+  .tag.dur{ background:var(--cyan); }
+
+  /* ================= ③ 倒计时 ================= */
+  .timer-wrap{ display:flex; flex-direction:column; align-items:center; padding-top:10px;}
+  .timer-wrap .now{ font-size:26px; font-weight:900; letter-spacing:-.5px; text-align:center;}
+  .timer-wrap .now small{ display:block; font-size:12px; font-weight:700; opacity:.55; margin-top:4px;}
+  .ring-big{ position:relative; width:212px; height:212px; margin:22px 0 12px;
+    border:4px solid var(--ink); border-radius:50%; background:#fff; box-shadow:var(--sh-lg);}
+  .ring-big svg{ transform:rotate(-90deg); position:absolute; inset:0; }
+  .ring-big .track{ fill:none; stroke:#eee; stroke-width:13; }
+  .ring-big .prog{ fill:none; stroke:var(--pink); stroke-width:13; stroke-linecap:butt;
+    transition:stroke-dashoffset 1s linear; }
+  .ring-big .count{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:52px; font-weight:900; font-variant-numeric:tabular-nums; letter-spacing:-2px;}
+  .timer-wrap .tip{ font-size:12.5px; font-weight:700; margin-bottom:8px; text-align:center;
+    background:var(--purple); border:2.5px solid var(--ink); border-radius:8px; padding:5px 12px; box-shadow:2px 2px 0 var(--ink);}
+
+  /* ================= ④ 完成庆祝 ================= */
+  .done-wrap{ display:flex; flex-direction:column; align-items:center; text-align:center; padding-top:8px; position:relative;}
+  .stamp{ width:132px;height:132px; border:5px solid var(--ink); background:var(--lime);
+    border-radius:50%; display:flex; align-items:center; justify-content:center; flex-direction:column;
+    font-weight:900; margin:4px 0 6px; box-shadow:var(--sh-lg); transform:rotate(-8deg);
+    animation:stampIn .45s cubic-bezier(.2,1.4,.4,1); }
+  .stamp .tick{ font-size:50px; line-height:1;}
+  .stamp .lbl{ font-size:15px; letter-spacing:3px; margin-top:1px;}
+  @keyframes stampIn{ 0%{transform:scale(2.3) rotate(-20deg); opacity:0}
+    60%{transform:scale(.9) rotate(-11deg); opacity:1} 100%{transform:scale(1) rotate(-8deg)} }
+  .done-wrap .crab-hug{ font-size:60px; margin-top:6px; animation:bob 2.4s ease-in-out infinite;}
+  .done-wrap .cheer{ font-size:22px; font-weight:900; margin-top:12px; line-height:1.35; letter-spacing:-.5px;}
+  .done-wrap .cheer .hl{ background:var(--pink); color:#fff; padding:0 6px; border:2.5px solid var(--ink); border-radius:6px;
+    box-shadow:2px 2px 0 var(--ink); display:inline-block; }
+  .done-wrap .streak{ margin-top:14px; font-size:13px; font-weight:800;
+    background:var(--cyan); border:var(--bd); border-radius:9px; padding:7px 15px; box-shadow:var(--sh-sm);}
+  .done-wrap .streak b{ background:#fff; padding:0 5px; border:2px solid var(--ink); border-radius:4px;}
+  .confetti{ position:absolute; top:0; width:11px; height:16px; border:2px solid var(--ink);
+    animation:fall linear forwards; }
+  @keyframes fall{ to{ transform:translateY(430px) rotate(560deg); opacity:0 } }
+
+  /* ================= ⑤ 拒绝 ================= */
+  .refuse-wrap{ text-align:center; padding-top:20px; }
+  .refuse-wrap .crab-sad{ font-size:58px; animation:tiltsad 3s ease-in-out infinite;}
+  @keyframes tiltsad{ 50%{transform:rotate(-7deg) translateY(2px)} }
+  .refuse-wrap .h{ font-size:21px; font-weight:900; margin-top:10px; letter-spacing:-.5px;}
+  .refuse-wrap .p{ font-size:13px; font-weight:600; margin-top:8px; line-height:1.6; }
+  .reasons{ display:flex; flex-wrap:wrap; gap:9px; justify-content:center; margin:20px 4px 8px;}
+  .reason{ font-size:13px; font-weight:800; padding:9px 14px; border-radius:9px; cursor:pointer;
+    border:var(--bd); background:#fff; box-shadow:var(--sh-sm); transition:.1s; }
+  .reason:hover{ transform:translate(-1px,-1px); box-shadow:4px 4px 0 var(--ink); }
+  .reason.sel{ background:var(--pink); color:#fff; transform:translate(2px,2px); box-shadow:1px 1px 0 var(--ink);}
+  .refuse-note{ font-size:11.5px; font-weight:700; margin-top:8px; }
+
+  /* ================= ⑥ 记录页 ================= */
+  .rec-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:15px;}
+  .rec-head .h{ font-size:21px; font-weight:900; letter-spacing:-.5px;}
+  .rec-head .sub{ font-size:11px; font-weight:700; opacity:.6;}
+  .stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:15px; }
+  .stat{ border:var(--bd); border-radius:11px; padding:11px 6px; text-align:center; box-shadow:var(--sh-sm);}
+  .stat:nth-child(1){ background:var(--pink); } .stat:nth-child(1) .num{ color:#fff; }
+  .stat:nth-child(2){ background:var(--cyan); }
+  .stat:nth-child(3){ background:var(--lime); }
+  .stat .num{ font-size:26px; font-weight:900; line-height:1; font-variant-numeric:tabular-nums; letter-spacing:-1px;}
+  .stat .cap{ font-size:10.5px; font-weight:800; margin-top:6px; }
+
+  .insight{ background:var(--purple); border:var(--bd); border-radius:11px; padding:12px 13px; margin-bottom:16px;
+    box-shadow:var(--sh-sm); }
+  .insight .t{ font-size:12.5px; font-weight:900; margin-bottom:6px; display:flex; align-items:center; gap:6px;}
+  .insight .b{ font-size:12px; font-weight:600; line-height:1.6; }
+  .insight .b b{ background:#fff; padding:0 4px; border:1.5px solid var(--ink); border-radius:4px;}
+
+  .tabs{ display:flex; gap:8px; margin-bottom:13px; }
+  .tab{ font-size:12px; font-weight:800; padding:7px 14px; border-radius:8px; cursor:pointer;
+    border:var(--bd); background:#fff; box-shadow:var(--sh-sm); }
+  .tab.active{ background:var(--ink); color:var(--panel); }
+
+  .rec-list{ display:flex; flex-direction:column; gap:10px; }
+  .rec{ display:flex; align-items:center; gap:11px; padding:10px 12px;
+    background:#fff; border:var(--bd); border-radius:11px; box-shadow:var(--sh-sm);}
+  .rec .ic{ width:40px;height:40px; border:2.5px solid var(--ink); border-radius:9px;
+    display:flex;align-items:center;justify-content:center; font-size:20px; flex:none; background:var(--paper2);}
+  .rec .body{ flex:1; min-width:0; }
+  .rec .body .top{ display:flex; align-items:center; gap:7px; }
+  .rec .body .mv{ font-size:14px; font-weight:900; }
+  .rec .body .when{ font-size:10.5px; font-weight:700; opacity:.55; margin-left:auto; white-space:nowrap;}
+  .rec .body .meta{ font-size:11px; font-weight:600; margin-top:4px; }
+  .rec .body .meta .why{ font-weight:800; }
+  .pill{ font-size:10px; font-weight:900; padding:2px 8px; border-radius:6px; border:2px solid var(--ink); flex:none;}
+  .pill.done{ background:var(--lime); }
+  .pill.skip{ background:var(--orange); }
+
+  /* ---------- 通用按钮 ---------- */
+  .controls{ display:flex; align-items:center; justify-content:center; gap:11px; margin-top:22px; }
+  button{ font-family:inherit; cursor:pointer; border:var(--bd); border-radius:10px;
+    padding:12px 20px; font-size:14px; font-weight:900; background:#fff; box-shadow:var(--sh); transition:.1s; }
+  button:hover{ transform:translate(-1px,-1px); box-shadow:6px 6px 0 var(--ink); }
+  button:active{ transform:translate(5px,5px); box-shadow:0 0 0 var(--ink); }
+  .btn-primary{ background:var(--pink); color:#fff; }
+  .btn-go{ background:var(--lime); }
+  .btn-ghost{ background:#fff; }
+
+  /* ---------- demo 导航 ---------- */
+  .demo-nav{ position:fixed; bottom:0; left:0; right:0; z-index:50;
+    display:flex; gap:7px; justify-content:center; flex-wrap:wrap;
+    padding:11px 12px; background:var(--ink); border-top:4px solid var(--ink);}
+  .demo-nav .tagline{ width:100%; text-align:center; color:#ffd84d; font-size:10px; font-weight:800; margin-bottom:3px;}
+  .demo-nav .dn{ font-size:11.5px; font-weight:800; color:var(--ink); padding:6px 12px; border-radius:8px;
+    border:2.5px solid #fff; cursor:pointer; background:#fff; box-shadow:2px 2px 0 #fff;}
+  .demo-nav .dn:hover{ transform:translate(-1px,-1px); }
+  .demo-nav .dn.active{ background:var(--lime); }
+
+  @media (prefers-reduced-motion:reduce){ *{ animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+  <div class="panel">
+    <div class="titlebar">
+      <span class="crab">🦀</span>
+      <span class="name">BREAKCARD <small>抽一张 · 动 5 分钟</small></span>
+      <span class="x">✕</span>
+    </div>
+
+    <!-- ① 抽卡主界面 -->
+    <section class="screen active" id="s-draw">
+      <div class="ai-banner">🦀 <span>AI 默认帮你选了 <b id="aiCtx">办公室</b>　今天把「趴地类」降了权</span></div>
+      <div class="ctx-label">▸ 我现在在哪</div>
+      <div class="ctx-row" id="ctxRow"></div>
+      <div class="deal-head">
+        <span class="h">翻一张盲盒</span>
+        <span class="sub" id="poolInfo">6 张都适合这里</span>
+      </div>
+      <div class="grid" id="grid"></div>
+      <div class="deal-foot">不想要这批？<span class="link" id="reshuffle">🔀 重新洗牌</span></div>
+    </section>
+
+    <!-- ② 翻开动作详情 -->
+    <section class="screen" id="s-reveal">
+      <div class="reveal-wrap">
+        <div class="big-card" id="bigCard">
+          <div class="eyebrow" id="rGoal">力量</div>
+          <div class="move" id="rZh">靠墙静蹲</div>
+          <div class="move-en" id="rEn">Wall Sit</div>
+          <div class="emoji" id="rEmoji">🧱</div>
+          <div class="desc" id="rDesc"></div>
+          <div class="fit-row" id="rFit"></div>
+          <div class="meta-row">
+            <span class="tag goal" id="rTagGoal">力量</span>
+            <span class="tag" id="rTagPart">下肢</span>
+            <span class="tag dur">5 分钟</span>
+          </div>
+        </div>
+        <div class="controls">
+          <button class="btn-ghost" id="rRedraw">↻ 换一张</button>
+          <button class="btn-go" id="rStart">开始 5 分钟</button>
+        </div>
+        <div class="controls" style="margin-top:8px">
+          <button class="btn-ghost" id="rSkip" style="font-size:12.5px; padding:9px 16px">这次不练</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ③ 倒计时 -->
+    <section class="screen" id="s-timer">
+      <div class="timer-wrap">
+        <div class="now" id="tName">靠墙静蹲<small id="tEn">Wall Sit</small></div>
+        <div class="ring-big">
+          <svg width="212" height="212" viewBox="0 0 212 212">
+            <circle class="track" cx="106" cy="106" r="92"></circle>
+            <circle class="prog" id="tProg" cx="106" cy="106" r="92"
+              stroke-dasharray="578" stroke-dashoffset="0"></circle>
+          </svg>
+          <div class="count" id="tCount">0:30</div>
+        </div>
+        <div class="tip" id="tTip">动起来，等它跑完不如等你练完</div>
+        <div class="controls">
+          <button class="btn-ghost" id="tGiveup">放弃</button>
+          <button class="btn-primary" id="tDone">Done ✓</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ④ 完成庆祝 -->
+    <section class="screen" id="s-done">
+      <div class="done-wrap" id="doneWrap">
+        <div class="stamp"><span class="tick">✓</span><span class="lbl">打卡</span></div>
+        <div class="crab-hug">🦀💗</div>
+        <div class="cheer" id="cheer">你的颈椎刚发来<br>一条<span class="hl">感谢</span></div>
+        <div class="streak">连续打卡 <b id="streakN">3</b> 天 · 本周第 <b id="weekN">7</b> 次</div>
+        <div class="controls">
+          <button class="btn-ghost" id="dRecords">看记录</button>
+          <button class="btn-primary" id="dClose">收下，继续等</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑤ 拒绝 -->
+    <section class="screen" id="s-refuse">
+      <div class="refuse-wrap">
+        <div class="crab-sad">🦀</div>
+        <div class="h">这次先不练？没事</div>
+        <div class="p">告诉螃蟹一句原因，<br>它会照着帮你调整下次的推荐 👇</div>
+        <div class="reasons" id="reasons"></div>
+        <div class="refuse-note" id="refuseNote">选一个就好，也可以直接跳过</div>
+        <div class="controls">
+          <button class="btn-ghost" id="fSkip">直接跳过</button>
+          <button class="btn-primary" id="fConfirm">记下，下次见</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑥ 记录页 -->
+    <section class="screen" id="s-records">
+      <div class="rec-head">
+        <span class="h">运动记录</span>
+        <span class="sub">每一次动 / 每一次拒绝</span>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="num">7</div><div class="cap">本周完成</div></div>
+        <div class="stat"><div class="num">3</div><div class="cap">连续天数</div></div>
+        <div class="stat"><div class="num">78%</div><div class="cap">完成率</div></div>
+      </div>
+      <div class="insight">
+        <div class="t">🦀 AI 洞察 · 已据此调整卡组</div>
+        <div class="b">你在「咖啡厅」几乎只接受拉伸类 → 已减少力量卡；「趴地动作」连续被拒 2 次 → 本周先不发了；最常拒绝原因是 <b>正忙</b>，已把单次默认调到 3 分钟试试。</div>
+      </div>
+      <div class="tabs" id="recTabs">
+        <span class="tab active" data-f="all">全部</span>
+        <span class="tab" data-f="done">已完成</span>
+        <span class="tab" data-f="skip">拒绝</span>
+      </div>
+      <div class="rec-list" id="recList"></div>
+    </section>
+  </div>
+
+  <!-- demo 导航（仅预览用） -->
+  <nav class="demo-nav">
+    <span class="tagline">▾ DEMO 导航（看效果用，正式上线不出现）</span>
+    <button class="dn active" data-s="s-draw">① 抽卡</button>
+    <button class="dn" data-s="s-reveal">② 翻开</button>
+    <button class="dn" data-s="s-timer">③ 倒计时</button>
+    <button class="dn" data-s="s-done">④ 完成</button>
+    <button class="dn" data-s="s-refuse">⑤ 拒绝</button>
+    <button class="dn" data-s="s-records">⑥ 记录</button>
+  </nav>
+
+<script>
+/* ====================== 数据（预览内置，正式版来自 moves.json） ====================== */
+const GOAL = { lose:"减脂", strength:"力量", stretch:"拉伸" };
+const MOVES = [
+  { zh:"颈部放松", en:"Neck Release", emoji:"🧘", goal:"stretch", part:"颈肩", t:[0,0,0,0], desc:"久坐救星。缓慢转头、侧倾，每个方向停 3 秒，别甩脖子。" },
+  { zh:"箱式呼吸", en:"Box Breathing", emoji:"🌬️", goal:"stretch", part:"呼吸", t:[0,0,0,0], desc:"吸 4 拍、停 4 拍、呼 4 拍、停 4 拍。坐着闭眼也行。" },
+  { zh:"脚踝泵", en:"Ankle Pumps", emoji:"🦶", goal:"stretch", part:"下肢", t:[0,0,0,0], desc:"坐着把脚尖用力勾起再绷直，促进久坐后的下肢循环。" },
+  { zh:"肩部环绕", en:"Shoulder Rolls", emoji:"🤷", goal:"stretch", part:"颈肩", t:[0,0,0,0], desc:"双肩向后画大圈 10 次，再向前 10 次，打开含胸。" },
+  { zh:"手腕拉伸", en:"Wrist Stretch", emoji:"🤚", goal:"stretch", part:"手腕", t:[0,0,0,0], desc:"敲了一天键盘？手臂前伸，轻压手背与手指，左右各 20 秒。" },
+  { zh:"坐姿收腹", en:"Seated Ab Squeeze", emoji:"🪑", goal:"strength", part:"核心", t:[0,0,0,0], desc:"坐直，用力收紧腹部 5 秒再放松，重复。神不知鬼不觉。" },
+  { zh:"远眺放松", en:"Eye Rest 20-20", emoji:"👀", goal:"stretch", part:"眼睛", t:[0,0,0,0], desc:"看 6 米外的东西 20 秒，眨眼放松，给屏幕看疲的眼睛松绑。" },
+  { zh:"坐姿提踵", en:"Seated Calf Raise", emoji:"🦵", goal:"strength", part:"下肢", t:[0,0,0,0], desc:"坐着脚跟反复抬起落下，可在脚上压点重量，悄悄练小腿。" },
+  { zh:"靠墙静蹲", en:"Wall Sit", emoji:"🧱", goal:"strength", part:"下肢", t:[1,0,0,1], desc:"背贴墙下滑到大腿与地面平行，膝盖 90°，撑住别塌。" },
+  { zh:"站姿提踵", en:"Standing Calf Raise", emoji:"🦵", goal:"strength", part:"下肢", t:[0,0,0,1], desc:"站直，脚跟尽量抬高停 1 秒再落下，扶桌也行。" },
+  { zh:"扩胸拉伸", en:"Chest Opener", emoji:"🙆", goal:"stretch", part:"胸背", t:[1,0,0,1], desc:"双手体后十指相扣，挺胸向上提，把含胸驼背拉开。" },
+  { zh:"站姿颈肩拉伸", en:"Standing Neck Stretch", emoji:"🧎", goal:"stretch", part:"颈肩", t:[0,0,0,1], desc:"一手轻扶头顶往侧拉，感受颈侧延展，两边各 20 秒。" },
+  { zh:"原地踏步", en:"March in Place", emoji:"🚶", goal:"lose", part:"全身", t:[1,1,1,1], desc:"原地踏步、摆臂，节奏快一点，3 分钟就微微出汗。" },
+  { zh:"靠墙俯卧撑", en:"Wall Push-up", emoji:"🧱", goal:"strength", part:"上肢", t:[1,0,1,1], desc:"面墙站，双手撑墙做俯卧撑，比地面版友好，练胸臂。" },
+  { zh:"弓步蹲", en:"Lunge", emoji:"🦵", goal:"strength", part:"下肢", t:[2,0,1,1], desc:"向前迈一大步下蹲，后膝近地，左右交替，练腿臀。" },
+  { zh:"开合跳", en:"Jumping Jacks", emoji:"🤸", goal:"lose", part:"全身", t:[1,2,2,1], desc:"全身有氧，快速升心率。等代码编译的 5 分钟正好。" },
+  { zh:"高抬腿", en:"High Knees", emoji:"🏃", goal:"lose", part:"全身", t:[1,2,2,1], desc:"原地高抬腿，核心收紧，节奏快一点，燃脂利器。" },
+  { zh:"平板支撑", en:"Plank", emoji:"💪", goal:"strength", part:"核心", t:[2,0,1,2], desc:"肘撑地，身体一条直线，别塌腰别撅臀，撑住。" },
+  { zh:"俯卧撑", en:"Push-up", emoji:"🙇", goal:"strength", part:"上肢", t:[2,0,1,2], desc:"标准或跪姿都行，下放至胸近地，稳稳推起。" },
+  { zh:"臀桥", en:"Glute Bridge", emoji:"🌉", goal:"strength", part:"臀", t:[2,0,1,2], desc:"仰卧屈膝，臀部发力顶起再落下，久坐臀的解药。" },
+  { zh:"波比跳", en:"Burpee", emoji:"🔥", goal:"lose", part:"全身", t:[2,2,2,2], desc:"深蹲—撑地—跳起，全身高强度，想爆汗就它。" },
+];
+const CONTEXTS = [
+  { key:"office",  label:"🏢 办公室/工位", max:[1,0,0,1] },
+  { key:"cafe",    label:"☕ 咖啡厅/公共", max:[0,0,0,0] },
+  { key:"home",    label:"🏠 家里",        max:[2,2,2,2] },
+  { key:"hallway", label:"🚶 走廊/茶水间", max:[1,1,1,1] },
+];
+const FIT_LABELS = [
+  (t)=> t[3]===0 && t[0]===0 ? "坐着也能做" : null,
+  (t)=> t[1]===0 ? "静音" : null,
+  (t)=> t[2]===0 ? "不易察觉" : null,
+  (t)=> t[0]<=1  ? "小范围" : null,
+];
+const DONE_MSGS = [
+  { test:(m)=>m.part==="颈肩"||m.part==="眼睛", html:'你的颈椎刚发来<br>一条<span class="hl">感谢</span>' },
+  { test:(m)=>m.goal==="lose", html:'5 分钟偷回来了<br>这把<span class="hl">心率</span>你赢了' },
+  { test:()=>true, html:'动完这一下<br>螃蟹给你<span class="hl">比个心</span>' },
+];
+const REASONS = ["正忙，这会儿不行","不在状态","这个动作不想做","环境不合适","待会儿再说"];
+const SEED_RECORDS = [
+  { type:"done", zh:"靠墙静蹲", emoji:"🧱", ctx:"办公室", when:"今天 09:40" },
+  { type:"done", zh:"颈部放松", emoji:"🧘", ctx:"办公室", when:"今天 09:08" },
+  { type:"skip", zh:"平板支撑", emoji:"💪", ctx:"办公室", when:"昨天 16:22", why:"环境不合适" },
+  { type:"done", zh:"箱式呼吸", emoji:"🌬️", ctx:"咖啡厅", when:"昨天 15:20" },
+  { type:"done", zh:"站姿提踵", emoji:"🦵", ctx:"走廊",   when:"昨天 11:05" },
+  { type:"skip", zh:"开合跳",   emoji:"🤸", ctx:"办公室", when:"昨天 10:30", why:"正忙，这会儿不行" },
+  { type:"done", zh:"肩部环绕", emoji:"🤷", ctx:"咖啡厅", when:"6/26 14:10" },
+  { type:"done", zh:"高抬腿",   emoji:"🏃", ctx:"家里",   when:"6/26 20:40" },
+  { type:"skip", zh:"俯卧撑",   emoji:"🙇", ctx:"办公室", when:"6/25 15:55", why:"不在状态" },
+  { type:"done", zh:"弓步蹲",   emoji:"🦵", ctx:"家里",   when:"6/25 21:12" },
+];
+const DURATION = 30;
+
+/* ====================== 状态 & 工具 ====================== */
+let curCtx="office", dealtMoves=[], chosen=null, chosenReason=null, ticking=null;
+const $ = (id)=>document.getElementById(id);
+function eligible(ctx){ const m=CONTEXTS.find(c=>c.key===ctx).max;
+  return MOVES.filter(mv => mv.t.every((v,i)=> v<=m[i])); }
+function sample(arr,n){ const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a.slice(0,n); }
+function show(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  $(id).classList.add("active");
+  document.querySelectorAll(".demo-nav .dn").forEach(b=>b.classList.toggle("active", b.dataset.s===id));
+  if(id==="s-timer") startTimer();
+  if(id==="s-done") celebrate();
+}
+
+/* ① 抽卡 */
+function renderCtx(){
+  const row=$("ctxRow"); row.innerHTML="";
+  CONTEXTS.forEach(c=>{
+    const el=document.createElement("div");
+    el.className="ctx"+(c.key===curCtx?" active":""); el.textContent=c.label;
+    el.onclick=()=>{ curCtx=c.key; renderCtx(); deal(); $("aiCtx").textContent=c.label.replace(/^\S+\s/,""); };
+    row.appendChild(el);
+  });
+}
+function deal(){
+  const pool=eligible(curCtx);
+  dealtMoves=sample(pool, Math.min(6,pool.length));
+  $("poolInfo").textContent=`${dealtMoves.length} 张都适合这里`;
+  const grid=$("grid"); grid.innerHTML="";
+  dealtMoves.forEach((mv,i)=>{
+    const slot=document.createElement("div");
+    slot.className="slot dealing"; slot.style.animationDelay=(i*55)+"ms";
+    slot.innerHTML=`<div class="mini">
+        <div class="mf mback"><div class="ring">🦀</div><div class="q">?</div></div>
+        <div class="mf mfront"><div class="e">${mv.emoji}</div><div class="n">${mv.zh}</div></div>
+      </div>`;
+    slot.onclick=()=>pick(slot,i);
+    grid.appendChild(slot);
+  });
+}
+function pick(slot,i){
+  if(slot.querySelector(".mini").classList.contains("flipped")) return;
+  document.querySelectorAll("#grid .slot").forEach(s=>{ if(s!==slot) s.classList.add("dim"); });
+  slot.querySelector(".mini").classList.add("flipped");
+  chosen=dealtMoves[i];
+  setTimeout(()=>{ fillReveal(chosen); show("s-reveal"); resetGridDim(); }, 700);
+}
+function resetGridDim(){ document.querySelectorAll("#grid .slot").forEach(s=>{ s.classList.remove("dim");
+  s.querySelector(".mini").classList.remove("flipped"); }); }
+
+/* ② 翻开 */
+function fillReveal(m){
+  $("rGoal").textContent=GOAL[m.goal];
+  $("rZh").textContent=m.zh; $("rEn").textContent=m.en;
+  $("rEmoji").textContent=m.emoji; $("rDesc").textContent=m.desc;
+  $("rTagGoal").textContent=GOAL[m.goal]; $("rTagPart").textContent=m.part;
+  const fit=$("rFit"); fit.innerHTML="";
+  FIT_LABELS.map(f=>f(m.t)).filter(Boolean).forEach(lbl=>{
+    const s=document.createElement("span"); s.className="fit"; s.textContent="✓ "+lbl; fit.appendChild(s); });
+  const bc=$("bigCard"); bc.style.animation="none"; void bc.offsetWidth; bc.style.animation="";
+}
+
+/* ③ 倒计时 */
+function startTimer(){
+  if(!chosen) chosen=dealtMoves[0]||MOVES[0];
+  $("tName").firstChild.textContent=chosen.zh; $("tEn").textContent=chosen.en;
+  const C=578; let left=DURATION;
+  const render=()=>{ const mm=Math.floor(left/60),ss=left%60;
+    $("tCount").textContent=`${mm}:${String(ss).padStart(2,"0")}`;
+    $("tProg").style.strokeDashoffset=C*(1-left/DURATION); };
+  render(); clearInterval(ticking);
+  ticking=setInterval(()=>{ left--; if(left<0){clearInterval(ticking); show("s-done"); return;} render(); },1000);
+}
+
+/* ④ 完成 */
+function celebrate(){
+  const m=chosen||MOVES[0];
+  $("cheer").innerHTML=(DONE_MSGS.find(d=>d.test(m))||DONE_MSGS[2]).html;
+  const wrap=$("doneWrap");
+  wrap.querySelectorAll(".confetti").forEach(c=>c.remove());
+  const colors=["#ff5470","#39c7ff","#b6f23e","#b18cff","#ff8c3b"];
+  for(let i=0;i<26;i++){
+    const c=document.createElement("div"); c.className="confetti";
+    c.style.left=(Math.random()*100)+"%"; c.style.background=colors[i%colors.length];
+    c.style.animationDuration=(1.1+Math.random()*1.1)+"s"; c.style.animationDelay=(Math.random()*.4)+"s";
+    c.style.transform=`translateY(-20px) rotate(${Math.random()*360}deg)`;
+    wrap.appendChild(c);
+  }
+}
+
+/* ⑤ 拒绝 */
+function renderReasons(){
+  const box=$("reasons"); box.innerHTML=""; chosenReason=null;
+  REASONS.forEach(r=>{
+    const el=document.createElement("div"); el.className="reason"; el.textContent=r;
+    el.onclick=()=>{ box.querySelectorAll(".reason").forEach(x=>x.classList.remove("sel"));
+      el.classList.add("sel"); chosenReason=r; $("refuseNote").textContent="🦀 记下了，会照着调整下次的推荐"; };
+    box.appendChild(el);
+  });
+}
+
+/* ⑥ 记录 */
+let recFilter="all";
+function renderRecords(){
+  const list=$("recList"); list.innerHTML="";
+  SEED_RECORDS.filter(r=> recFilter==="all"||r.type===recFilter).forEach(r=>{
+    const el=document.createElement("div"); el.className="rec";
+    el.innerHTML=`<div class="ic">${r.emoji}</div>
+      <div class="body">
+        <div class="top"><span class="mv">${r.zh}</span>
+          <span class="pill ${r.type}">${r.type==="done"?"完成":"拒绝"}</span>
+          <span class="when">${r.when}</span></div>
+        <div class="meta">📍${r.ctx}${r.why?` · <span class="why">原因：${r.why}</span>`:""}</div>
+      </div>`;
+    list.appendChild(el);
+  });
+}
+
+/* 绑定 */
+$("reshuffle").onclick=deal;
+$("rRedraw").onclick=()=>{ deal(); show("s-draw"); };
+$("rStart").onclick=()=>show("s-timer");
+$("rSkip").onclick=()=>{ renderReasons(); show("s-refuse"); };
+$("tGiveup").onclick=()=>{ clearInterval(ticking); renderReasons(); show("s-refuse"); };
+$("tDone").onclick=()=>{ clearInterval(ticking); show("s-done"); };
+$("dClose").onclick=()=>show("s-draw");
+$("dRecords").onclick=()=>{ renderRecords(); show("s-records"); };
+$("fConfirm").onclick=()=>{ renderRecords(); show("s-records"); };
+$("fSkip").onclick=()=>show("s-draw");
+$("recTabs").querySelectorAll(".tab").forEach(t=>{
+  t.onclick=()=>{ $("recTabs").querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+    t.classList.add("active"); recFilter=t.dataset.f; renderRecords(); };
+});
+document.querySelectorAll(".demo-nav .dn").forEach(b=>{
+  b.onclick=()=>{ if(b.dataset.s==="s-records") renderRecords(); if(b.dataset.s==="s-refuse") renderReasons(); show(b.dataset.s); };
+});
+document.querySelector(".titlebar .x").onclick=()=>show("s-draw");
+
+renderCtx(); deal(); renderRecords();
+</script>
+</body>
+</html>
