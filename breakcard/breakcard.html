@@ -3,174 +3,376 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Break Card</title>
+<title>BreakCard · UI 预览 (Neobrutalism)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
-  /* ---- Design tokens (Spark Garden 纸感 / 手绘) ---- */
+  /* ============================================================
+     BreakCard UI 预览 — Neobrutalism 版
+     粗黑边 + 硬阴影 + 高饱和撞色 + 重磅字。流程同手绘版。
+     纯前端、数据内置、可点击、含 demo 导航。
+     ============================================================ */
   :root{
-    --paper:#f3ead7;        /* 牛皮纸底 */
-    --paper-deep:#e7d8b8;
-    --ink:#3a3128;          /* 墨色文字 */
-    --ink-soft:#7a6f5d;
-    --accent:#c8643c;       /* 朱砂橙 (动起来) */
-    --accent-cool:#5b7a6a;  /* 拉伸/呼吸 的青绿 */
-    --line:#cdbf9f;
-    --shadow:rgba(58,49,40,.22);
-    --card-w:300px;
-    --card-h:420px;
+    --bg:#ffd84d;            /* 页面亮黄 */
+    --panel:#fffef6;
+    --ink:#141414;           /* 近黑：边框/阴影/文字 */
+    --pink:#ff5470;
+    --cyan:#39c7ff;
+    --lime:#b6f23e;
+    --purple:#b18cff;
+    --orange:#ff8c3b;
+    --paper2:#fff0d0;
+    --sh:5px 5px 0 var(--ink);
+    --sh-sm:3px 3px 0 var(--ink);
+    --sh-lg:7px 7px 0 var(--ink);
+    --bd:3px solid var(--ink);
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
   body{
-    background:transparent;               /* Electron 里透明; 调试时给个底色 */
-    font-family:"PingFang SC","Songti SC",Georgia,serif;
-    display:flex;align-items:center;justify-content:center;
+    min-height:100%;
+    font-family:"Noto Sans SC","PingFang SC","Helvetica Neue",sans-serif;
+    color:var(--ink);
+    background:transparent;             /* Electron 透明悬浮窗：只显示面板 */
+    display:flex; align-items:center; justify-content:center;
+    padding:10px 22px 22px 10px;        /* 给右下硬阴影留位 */
     -webkit-font-smoothing:antialiased;
     overflow:hidden;
   }
-  /* 调试时的可见底色, 注入 Electron 时删掉这条 */
-  body.debug{background:#9aa89c}
+  .heavy{ font-weight:900; letter-spacing:-.3px; }
 
-  .stage{ position:relative; width:var(--card-w); height:calc(var(--card-h) + 90px); }
-
-  /* ---- 抽卡牌 ---- */
-  .deck{ position:relative; width:var(--card-w); height:var(--card-h);
-    perspective:1400px; }
-  .card{ position:absolute; inset:0; transform-style:preserve-3d;
-    transition:transform .7s cubic-bezier(.2,.8,.2,1); }
-  .face{ position:absolute; inset:0; backface-visibility:hidden;
-    border-radius:14px; box-shadow:0 14px 30px var(--shadow);
-    background:var(--paper);
-    /* 纸纹 */
-    background-image:
-      radial-gradient(circle at 30% 20%, rgba(255,255,255,.5), transparent 40%),
-      repeating-linear-gradient(0deg, rgba(0,0,0,.012) 0 2px, transparent 2px 4px);
-    border:1px solid var(--line);
+  /* ---------- 浮窗外框 ---------- */
+  .panel{
+    position:relative; width:408px;
+    background:var(--panel);
+    border:4px solid var(--ink);
+    border-radius:14px;
+    box-shadow:9px 9px 0 var(--ink);
     overflow:hidden;
   }
-  .back{ display:flex; align-items:center; justify-content:center; flex-direction:column;
-    background:var(--paper-deep); }
-  .back .mark{ width:120px;height:120px;border:2px dashed var(--accent);
-    border-radius:50%; display:flex;align-items:center;justify-content:center;
-    font-size:54px; color:var(--accent); }
-  .back .hint{ margin-top:22px; color:var(--ink-soft); letter-spacing:3px; font-size:14px;}
-  .front{ transform:rotateY(180deg); display:flex; flex-direction:column; padding:22px;}
-
-  /* 翻牌 */
-  .deck.flipped .card{ transform:rotateY(180deg); }
-  /* 抽卡时轻微抬起+晃动 */
-  .deck.dealing .card{ animation:deal .5s ease; }
-  @keyframes deal{
-    0%{transform:translateY(0) rotateZ(0)}
-    30%{transform:translateY(-14px) rotateZ(-3deg)}
-    60%{transform:translateY(-6px) rotateZ(2deg)}
-    100%{transform:translateY(0) rotateZ(0)}
+  .titlebar{
+    display:flex; align-items:center; gap:9px;
+    padding:13px 18px; background:var(--pink);
+    border-bottom:4px solid var(--ink);
   }
+  .titlebar .crab{ font-size:20px; }
+  .titlebar .name{ font-size:15px; font-weight:900; letter-spacing:.3px; color:#fff;
+    text-shadow:2px 2px 0 var(--ink); }
+  .titlebar .name small{ color:#fff; font-weight:700; margin-left:7px; font-size:11px; opacity:.95; text-shadow:none;}
+  .titlebar .x{ margin-left:auto; width:24px;height:24px; background:#fff; border:2.5px solid var(--ink);
+    border-radius:6px; display:flex;align-items:center;justify-content:center;
+    font-size:13px; font-weight:900; cursor:pointer; box-shadow:2px 2px 0 var(--ink);}
 
-  /* ---- 动作卡正面 ---- */
-  .front .eyebrow{ font-size:12px;letter-spacing:4px;text-transform:uppercase;
-    color:var(--accent); margin-bottom:6px;}
-  .front .move{ font-size:30px; font-weight:700; color:var(--ink); line-height:1.15;}
-  .front .move-en{ font-size:13px; color:var(--ink-soft); margin-top:2px; letter-spacing:1px;}
-  .front .emoji{ font-size:84px; text-align:center; margin:18px 0 10px;
-    filter:drop-shadow(0 6px 8px var(--shadow)); }
-  .front .desc{ font-size:14px;color:var(--ink-soft); line-height:1.6; flex:1;}
-  .front .meta{ display:flex; gap:8px; margin-top:8px; }
-  .tag{ font-size:11px; padding:3px 9px; border-radius:20px;
-    border:1px solid var(--line); color:var(--ink-soft); background:rgba(255,255,255,.4);}
-  .tag.goal{ border-color:var(--accent); color:var(--accent); }
+  .screen{ display:none; padding:18px 20px 22px; min-height:548px; }
+  .screen.active{ display:block; animation:fadeIn .3s ease; }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none} }
 
-  /* ---- 倒计时 ---- */
-  .timer{ position:absolute; inset:0; border-radius:14px; background:var(--paper);
-    border:1px solid var(--line); box-shadow:0 14px 30px var(--shadow);
-    display:none; flex-direction:column; align-items:center; justify-content:center;
-    padding:24px; }
-  .timer.show{ display:flex; }
-  .timer .now{ font-size:22px; color:var(--ink); font-weight:600; text-align:center;}
-  .ring{ position:relative; width:200px;height:200px; margin:18px 0;}
-  .ring svg{ transform:rotate(-90deg); }
-  .ring .track{ fill:none; stroke:var(--line); stroke-width:10; }
-  .ring .prog{ fill:none; stroke:var(--accent); stroke-width:10; stroke-linecap:round;
+  /* ================= ① 抽卡主界面 ================= */
+  .ai-banner{
+    display:flex; align-items:center; gap:8px;
+    font-size:12px; font-weight:700; color:var(--ink);
+    background:var(--purple); border:var(--bd); border-radius:10px;
+    padding:9px 12px; margin-bottom:16px; box-shadow:var(--sh-sm);
+    transform:rotate(-1deg);
+  }
+  .ai-banner b{ background:#fff; padding:0 5px; border:2px solid var(--ink); border-radius:5px; }
+
+  .ctx-label{ font-size:11px; letter-spacing:1.5px; font-weight:900; text-transform:uppercase;
+    margin-bottom:9px; }
+  .ctx-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
+  .ctx{
+    font-size:12.5px; font-weight:800; padding:8px 12px; border-radius:9px; cursor:pointer;
+    border:var(--bd); background:#fff; box-shadow:var(--sh-sm); transition:.1s; white-space:nowrap; user-select:none;
+  }
+  .ctx:hover{ transform:translate(-1px,-1px); box-shadow:4px 4px 0 var(--ink); }
+  .ctx.active{ background:var(--cyan); transform:translate(2px,2px); box-shadow:1px 1px 0 var(--ink); }
+
+  .deal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:11px;}
+  .deal-head .h{ font-size:19px; font-weight:900; letter-spacing:-.5px; }
+  .deal-head .sub{ font-size:11px; font-weight:800; background:var(--lime); border:2.5px solid var(--ink);
+    border-radius:7px; padding:3px 8px; box-shadow:2px 2px 0 var(--ink); }
+
+  .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  .slot{ perspective:900px; }
+  .mini{ position:relative; width:100%; aspect-ratio:3/4; cursor:pointer;
+    transform-style:preserve-3d; transition:transform .6s cubic-bezier(.2,.8,.2,1); }
+  .mini .mf{ position:absolute; inset:0; backface-visibility:hidden;
+    border:var(--bd); border-radius:11px; box-shadow:var(--sh-sm);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .mini .mback{ background:var(--cyan); }
+  .mini .mback .ring{ width:44px;height:44px;border:3px solid var(--ink); background:#fff;
+    border-radius:50%; display:flex;align-items:center;justify-content:center; font-size:19px; }
+  .mini .mback .q{ margin-top:8px; font-size:26px; font-weight:900; }
+  .mini .mfront{ transform:rotateY(180deg); background:#fff; padding:8px; text-align:center; }
+  .mini .mfront .e{ font-size:34px; line-height:1; }
+  .mini .mfront .n{ font-size:12px; font-weight:900; margin-top:6px; }
+  .mini.flipped{ transform:rotateY(180deg); }
+  .slot:nth-child(3n+1) .mback{ background:var(--cyan); }
+  .slot:nth-child(3n+2) .mback{ background:var(--lime); }
+  .slot:nth-child(3n) .mback{ background:var(--orange); }
+  .slot:hover .mini:not(.flipped){ transform:translateY(-4px) rotate(-2deg); }
+  .slot.dim{ opacity:.4; }
+  .slot.dealing .mini{ animation:dealIn .45s backwards; }
+  @keyframes dealIn{ from{opacity:0; transform:translateY(16px) scale(.9)} to{opacity:1} }
+
+  .deal-foot{ text-align:center; margin-top:18px; font-size:12px; font-weight:700; }
+  .link{ background:var(--orange); border:2.5px solid var(--ink); border-radius:7px; padding:4px 10px;
+    cursor:pointer; box-shadow:2px 2px 0 var(--ink); display:inline-block; font-weight:900;}
+  .link:hover{ transform:translate(-1px,-1px); }
+
+  /* ================= ② 翻开动作详情 ================= */
+  .reveal-wrap{ display:flex; flex-direction:column; align-items:center; }
+  .big-card{ position:relative; width:272px; min-height:376px; border:4px solid var(--ink);
+    border-radius:14px; background:var(--panel); box-shadow:var(--sh-lg); padding:20px; overflow:hidden;
+    animation:cardPop .45s cubic-bezier(.2,.9,.3,1.2); }
+  @keyframes cardPop{ from{opacity:0; transform:scale(.85) translateY(10px)} to{opacity:1} }
+  .big-card .eyebrow{ display:inline-block; font-size:11px; font-weight:900; letter-spacing:1px;
+    text-transform:uppercase; background:var(--pink); color:#fff; border:2.5px solid var(--ink);
+    border-radius:7px; padding:3px 9px; box-shadow:2px 2px 0 var(--ink); margin-bottom:10px; }
+  .big-card .move{ font-size:32px; font-weight:900; line-height:1.05; letter-spacing:-1px; }
+  .big-card .move-en{ font-size:13px; font-weight:700; color:var(--ink); opacity:.6; margin-top:3px; letter-spacing:.5px;}
+  .big-card .emoji{ font-size:80px; text-align:center; margin:12px 0 8px; animation:bob 2.4s ease-in-out infinite;}
+  @keyframes bob{ 50%{transform:translateY(-6px) rotate(-3deg)} }
+  .big-card .desc{ font-size:13.5px; font-weight:600; line-height:1.6; min-height:60px;}
+  .fit-row{ display:flex; gap:6px; flex-wrap:wrap; margin-top:12px; }
+  .fit{ font-size:10.5px; font-weight:800; padding:3px 8px; border-radius:7px;
+    background:var(--lime); border:2px solid var(--ink); }
+  .meta-row{ display:flex; gap:7px; margin-top:10px; flex-wrap:wrap;}
+  .tag{ font-size:11px; font-weight:800; padding:3px 9px; border-radius:7px; border:2px solid var(--ink); background:#fff;}
+  .tag.goal{ background:var(--orange); }
+  .tag.dur{ background:var(--cyan); }
+
+  /* ================= ③ 倒计时 ================= */
+  .timer-wrap{ display:flex; flex-direction:column; align-items:center; padding-top:10px;}
+  .timer-wrap .now{ font-size:26px; font-weight:900; letter-spacing:-.5px; text-align:center;}
+  .timer-wrap .now small{ display:block; font-size:12px; font-weight:700; opacity:.55; margin-top:4px;}
+  .ring-big{ position:relative; width:212px; height:212px; margin:22px 0 12px;
+    border:4px solid var(--ink); border-radius:50%; background:#fff; box-shadow:var(--sh-lg);}
+  .ring-big svg{ transform:rotate(-90deg); position:absolute; inset:0; }
+  .ring-big .track{ fill:none; stroke:#eee; stroke-width:13; }
+  .ring-big .prog{ fill:none; stroke:var(--pink); stroke-width:13; stroke-linecap:butt;
     transition:stroke-dashoffset 1s linear; }
-  .ring .count{ position:absolute; inset:0; display:flex;align-items:center;justify-content:center;
-    font-size:46px; font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums;}
-  .timer .sub{ color:var(--ink-soft); font-size:13px; }
+  .ring-big .count{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:52px; font-weight:900; font-variant-numeric:tabular-nums; letter-spacing:-2px;}
+  .timer-wrap .tip{ font-size:12.5px; font-weight:700; margin-bottom:8px; text-align:center;
+    background:var(--purple); border:2.5px solid var(--ink); border-radius:8px; padding:5px 12px; box-shadow:2px 2px 0 var(--ink);}
 
-  /* ---- 控制条 ---- */
-  .controls{ position:absolute; bottom:0; left:0; right:0; height:64px;
-    display:flex; align-items:center; justify-content:center; gap:12px; }
-  button{ font-family:inherit; cursor:pointer; border:none; border-radius:24px;
-    padding:11px 22px; font-size:14px; font-weight:600; transition:transform .12s, filter .12s;
-    -webkit-app-region:no-drag; }
-  button:active{ transform:scale(.96); }
-  .btn-primary{ background:var(--accent); color:#fff; box-shadow:0 6px 14px var(--shadow);}
-  .btn-ghost{ background:transparent; color:var(--ink-soft); }
-  .btn-primary:hover{ filter:brightness(1.05);}
-  .hidden{ display:none !important; }
+  /* ================= ④ 完成庆祝 ================= */
+  .done-wrap{ display:flex; flex-direction:column; align-items:center; text-align:center; padding-top:8px; position:relative;}
+  .stamp{ width:132px;height:132px; border:5px solid var(--ink); background:var(--lime);
+    border-radius:50%; display:flex; align-items:center; justify-content:center; flex-direction:column;
+    font-weight:900; margin:4px 0 6px; box-shadow:var(--sh-lg); transform:rotate(-8deg);
+    animation:stampIn .45s cubic-bezier(.2,1.4,.4,1); }
+  .stamp .tick{ font-size:50px; line-height:1;}
+  .stamp .lbl{ font-size:15px; letter-spacing:3px; margin-top:1px;}
+  @keyframes stampIn{ 0%{transform:scale(2.3) rotate(-20deg); opacity:0}
+    60%{transform:scale(.9) rotate(-11deg); opacity:1} 100%{transform:scale(1) rotate(-8deg)} }
+  .done-wrap .crab-hug{ font-size:60px; margin-top:6px; animation:bob 2.4s ease-in-out infinite;}
+  .done-wrap .cheer{ font-size:22px; font-weight:900; margin-top:12px; line-height:1.35; letter-spacing:-.5px;}
+  .done-wrap .cheer .hl{ background:var(--pink); color:#fff; padding:0 6px; border:2.5px solid var(--ink); border-radius:6px;
+    box-shadow:2px 2px 0 var(--ink); display:inline-block; }
+  .done-wrap .streak{ margin-top:14px; font-size:13px; font-weight:800;
+    background:var(--cyan); border:var(--bd); border-radius:9px; padding:7px 15px; box-shadow:var(--sh-sm);}
+  .done-wrap .streak b{ background:#fff; padding:0 5px; border:2px solid var(--ink); border-radius:4px;}
+  .confetti{ position:absolute; top:0; width:11px; height:16px; border:2px solid var(--ink);
+    animation:fall linear forwards; }
+  @keyframes fall{ to{ transform:translateY(430px) rotate(560deg); opacity:0 } }
 
-  /* 顶部拖拽条（窗口拖动手柄）+ 右上角关闭按钮 */
-  .titlebar{ position:absolute; top:0; left:0; right:0; height:30px; z-index:30;
-    display:flex; align-items:center; justify-content:flex-end; padding:0 6px;
-    -webkit-app-region:drag; cursor:grab; }
-  .closeBtn{ width:26px; height:26px; padding:0; border-radius:50%; line-height:1;
-    background:rgba(58,49,40,.28); color:#fff; font-size:13px;
-    -webkit-app-region:no-drag; transition:background .12s; }
-  .closeBtn:hover{ background:var(--accent); }
+  /* ================= ⑤ 拒绝 ================= */
+  .refuse-wrap{ text-align:center; padding-top:20px; }
+  .refuse-wrap .crab-sad{ font-size:58px; animation:tiltsad 3s ease-in-out infinite;}
+  @keyframes tiltsad{ 50%{transform:rotate(-7deg) translateY(2px)} }
+  .refuse-wrap .h{ font-size:21px; font-weight:900; margin-top:10px; letter-spacing:-.5px;}
+  .refuse-wrap .p{ font-size:13px; font-weight:600; margin-top:8px; line-height:1.6; }
+  .reasons{ display:flex; flex-wrap:wrap; gap:9px; justify-content:center; margin:20px 4px 8px;}
+  .reason{ font-size:13px; font-weight:800; padding:9px 14px; border-radius:9px; cursor:pointer;
+    border:var(--bd); background:#fff; box-shadow:var(--sh-sm); transition:.1s; }
+  .reason:hover{ transform:translate(-1px,-1px); box-shadow:4px 4px 0 var(--ink); }
+  .reason.sel{ background:var(--pink); color:#fff; transform:translate(2px,2px); box-shadow:1px 1px 0 var(--ink);}
+  .refuse-note{ font-size:11.5px; font-weight:700; margin-top:8px; }
 
-  /* 完成态小庆祝 */
-  .done .front .emoji{ animation:pop .6s ease; }
-  @keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.25) rotate(8deg)}100%{transform:scale(1)}}
+  /* ================= ⑥ 记录页 ================= */
+  .rec-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:15px;}
+  .rec-head .h{ font-size:21px; font-weight:900; letter-spacing:-.5px;}
+  .rec-head .sub{ font-size:11px; font-weight:700; opacity:.6;}
+  .stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:15px; }
+  .stat{ border:var(--bd); border-radius:11px; padding:11px 6px; text-align:center; box-shadow:var(--sh-sm);}
+  .stat:nth-child(1){ background:var(--pink); } .stat:nth-child(1) .num{ color:#fff; }
+  .stat:nth-child(2){ background:var(--cyan); }
+  .stat:nth-child(3){ background:var(--lime); }
+  .stat .num{ font-size:26px; font-weight:900; line-height:1; font-variant-numeric:tabular-nums; letter-spacing:-1px;}
+  .stat .cap{ font-size:10.5px; font-weight:800; margin-top:6px; }
 
-  @media (prefers-reduced-motion:reduce){
-    .card,.deck.dealing .card,.front .emoji{transition:none;animation:none}
-  }
+  .insight{ background:var(--purple); border:var(--bd); border-radius:11px; padding:12px 13px; margin-bottom:16px;
+    box-shadow:var(--sh-sm); }
+  .insight .t{ font-size:12.5px; font-weight:900; margin-bottom:6px; display:flex; align-items:center; gap:6px;}
+  .insight .b{ font-size:12px; font-weight:600; line-height:1.6; }
+  .insight .b b{ background:#fff; padding:0 4px; border:1.5px solid var(--ink); border-radius:4px;}
+
+  .tabs{ display:flex; gap:8px; margin-bottom:13px; }
+  .tab{ font-size:12px; font-weight:800; padding:7px 14px; border-radius:8px; cursor:pointer;
+    border:var(--bd); background:#fff; box-shadow:var(--sh-sm); }
+  .tab.active{ background:var(--ink); color:var(--panel); }
+
+  .rec-list{ display:flex; flex-direction:column; gap:10px; }
+  .rec{ display:flex; align-items:center; gap:11px; padding:10px 12px;
+    background:#fff; border:var(--bd); border-radius:11px; box-shadow:var(--sh-sm);}
+  .rec .ic{ width:40px;height:40px; border:2.5px solid var(--ink); border-radius:9px;
+    display:flex;align-items:center;justify-content:center; font-size:20px; flex:none; background:var(--paper2);}
+  .rec .body{ flex:1; min-width:0; }
+  .rec .body .top{ display:flex; align-items:center; gap:7px; }
+  .rec .body .mv{ font-size:14px; font-weight:900; }
+  .rec .body .when{ font-size:10.5px; font-weight:700; opacity:.55; margin-left:auto; white-space:nowrap;}
+  .rec .body .meta{ font-size:11px; font-weight:600; margin-top:4px; }
+  .rec .body .meta .why{ font-weight:800; }
+  .pill{ font-size:10px; font-weight:900; padding:2px 8px; border-radius:6px; border:2px solid var(--ink); flex:none;}
+  .pill.done{ background:var(--lime); }
+  .pill.skip{ background:var(--orange); }
+
+  /* ---------- 通用按钮 ---------- */
+  .controls{ display:flex; align-items:center; justify-content:center; gap:11px; margin-top:22px; }
+  button{ font-family:inherit; cursor:pointer; border:var(--bd); border-radius:10px;
+    padding:12px 20px; font-size:14px; font-weight:900; background:#fff; box-shadow:var(--sh); transition:.1s; }
+  button:hover{ transform:translate(-1px,-1px); box-shadow:6px 6px 0 var(--ink); }
+  button:active{ transform:translate(5px,5px); box-shadow:0 0 0 var(--ink); }
+  .btn-primary{ background:var(--pink); color:#fff; }
+  .btn-go{ background:var(--lime); }
+  .btn-ghost{ background:#fff; }
+
+  /* ---------- demo 导航 ---------- */
+  .demo-nav{ position:fixed; bottom:0; left:0; right:0; z-index:50;
+    display:flex; gap:7px; justify-content:center; flex-wrap:wrap;
+    padding:11px 12px; background:var(--ink); border-top:4px solid var(--ink);}
+  .demo-nav .tagline{ width:100%; text-align:center; color:#ffd84d; font-size:10px; font-weight:800; margin-bottom:3px;}
+  .demo-nav .dn{ font-size:11.5px; font-weight:800; color:var(--ink); padding:6px 12px; border-radius:8px;
+    border:2.5px solid #fff; cursor:pointer; background:#fff; box-shadow:2px 2px 0 #fff;}
+  .demo-nav .dn:hover{ transform:translate(-1px,-1px); }
+  .demo-nav .dn.active{ background:var(--lime); }
+
+  @media (prefers-reduced-motion:reduce){ *{ animation:none !important; transition:none !important; } }
 </style>
 </head>
 <body>
-  <div class="stage">
-    <div class="titlebar"><button class="closeBtn" id="closeBtn" title="关闭，下次再练">✕</button></div>
-    <!-- 抽卡区 -->
-    <div class="deck" id="deck">
-      <div class="card" id="card">
-        <div class="face back">
-          <div class="mark">🦀</div>
-          <div class="hint">抽 一 张 · 动 5 分 钟</div>
-        </div>
-        <div class="face front" id="front">
-          <div class="eyebrow" id="goalLabel">力量</div>
-          <div class="move" id="moveZh">深蹲</div>
-          <div class="move-en" id="moveEn">Squat</div>
-          <div class="emoji" id="moveEmoji">🏋️</div>
-          <div class="desc" id="moveDesc"></div>
-          <div class="meta">
-            <span class="tag goal" id="tagGoal">力量</span>
-            <span class="tag" id="tagPart">下肢</span>
-            <span class="tag" id="tagDur">5 分钟</span>
+  <div class="panel">
+    <div class="titlebar">
+      <span class="crab">🦀</span>
+      <span class="name">BREAKCARD <small>抽一张 · 动 5 分钟</small></span>
+      <span class="x">✕</span>
+    </div>
+
+    <!-- ① 抽卡主界面 -->
+    <section class="screen active" id="s-draw">
+      <div class="ai-banner">🦀 <span>已按「<b id="aiCtx">办公室</b>」筛掉这里做不了的动作</span></div>
+      <div class="ctx-label">▸ 我现在在哪</div>
+      <div class="ctx-row" id="ctxRow"></div>
+      <div class="deal-head">
+        <span class="h">翻一张盲盒</span>
+        <span class="sub" id="poolInfo">6 张都适合这里</span>
+      </div>
+      <div class="grid" id="grid"></div>
+      <div class="deal-foot">不想要这批？<span class="link" id="reshuffle">🔀 重新洗牌</span></div>
+    </section>
+
+    <!-- ② 翻开动作详情 -->
+    <section class="screen" id="s-reveal">
+      <div class="reveal-wrap">
+        <div class="big-card" id="bigCard">
+          <div class="eyebrow" id="rGoal">力量</div>
+          <div class="move" id="rZh">靠墙静蹲</div>
+          <div class="move-en" id="rEn">Wall Sit</div>
+          <div class="emoji" id="rEmoji">🧱</div>
+          <div class="desc" id="rDesc"></div>
+          <div class="fit-row" id="rFit"></div>
+          <div class="meta-row">
+            <span class="tag goal" id="rTagGoal">力量</span>
+            <span class="tag" id="rTagPart">下肢</span>
+            <span class="tag dur">5 分钟</span>
           </div>
         </div>
-      </div>
-      <!-- 倒计时盖在卡上 -->
-      <div class="timer" id="timer">
-        <div class="now" id="timerMove">深蹲</div>
-        <div class="ring">
-          <svg width="200" height="200" viewBox="0 0 200 200">
-            <circle class="track" cx="100" cy="100" r="90"></circle>
-            <circle class="prog" id="prog" cx="100" cy="100" r="90"
-              stroke-dasharray="565.48" stroke-dashoffset="0"></circle>
-          </svg>
-          <div class="count" id="count">5:00</div>
+        <div class="controls">
+          <button class="btn-ghost" id="rRedraw">↻ 换一张</button>
+          <button class="btn-go" id="rStart">开始 5 分钟</button>
         </div>
-        <div class="sub" id="timerSub">动起来，等它跑完不如等你练完</div>
+        <div class="controls" style="margin-top:8px">
+          <button class="btn-ghost" id="rSkip" style="font-size:12.5px; padding:9px 16px">这次不练</button>
+        </div>
       </div>
-    </div>
+    </section>
 
-    <!-- 控制条 -->
-    <div class="controls" id="controls">
-      <button class="btn-primary" id="drawBtn">抽一张</button>
-      <button class="btn-ghost" id="skipBtn">这次不练</button>
-    </div>
+    <!-- ③ 倒计时 -->
+    <section class="screen" id="s-timer">
+      <div class="timer-wrap">
+        <div class="now" id="tName">靠墙静蹲<small id="tEn">Wall Sit</small></div>
+        <div class="ring-big">
+          <svg width="212" height="212" viewBox="0 0 212 212">
+            <circle class="track" cx="106" cy="106" r="92"></circle>
+            <circle class="prog" id="tProg" cx="106" cy="106" r="92"
+              stroke-dasharray="578" stroke-dashoffset="0"></circle>
+          </svg>
+          <div class="count" id="tCount">0:30</div>
+        </div>
+        <div class="tip" id="tTip">动起来，等它跑完不如等你练完</div>
+        <div class="controls">
+          <button class="btn-ghost" id="tGiveup">放弃</button>
+          <button class="btn-primary" id="tDone">Done ✓</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ④ 完成庆祝 -->
+    <section class="screen" id="s-done">
+      <div class="done-wrap" id="doneWrap">
+        <div class="stamp"><span class="tick">✓</span><span class="lbl">打卡</span></div>
+        <div class="crab-hug">🦀💗</div>
+        <div class="cheer" id="cheer">你的颈椎刚发来<br>一条<span class="hl">感谢</span></div>
+        <div class="streak">连续打卡 <b id="streakN">3</b> 天 · 本周第 <b id="weekN">7</b> 次</div>
+        <div class="controls">
+          <button class="btn-ghost" id="dRecords">看记录</button>
+          <button class="btn-primary" id="dClose">收下，继续等</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑤ 拒绝 -->
+    <section class="screen" id="s-refuse">
+      <div class="refuse-wrap">
+        <div class="crab-sad">🦀</div>
+        <div class="h">这次先不练？没事</div>
+        <div class="p">告诉螃蟹一句原因，<br>它会照着帮你调整下次的推荐 👇</div>
+        <div class="reasons" id="reasons"></div>
+        <div class="refuse-note" id="refuseNote">选一个就好，也可以直接跳过</div>
+        <div class="controls">
+          <button class="btn-ghost" id="fSkip">直接跳过</button>
+          <button class="btn-primary" id="fConfirm">记下，下次见</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑥ 记录页 -->
+    <section class="screen" id="s-records">
+      <div class="rec-head">
+        <span class="h">运动记录</span>
+        <span class="sub">每一次动 / 每一次拒绝</span>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="num">7</div><div class="cap">本周完成</div></div>
+        <div class="stat"><div class="num">3</div><div class="cap">连续天数</div></div>
+        <div class="stat"><div class="num">78%</div><div class="cap">完成率</div></div>
+      </div>
+      <div class="insight" style="display:none">
+        <div class="t">🦀 AI 洞察 · 已据此调整卡组</div>
+        <div class="b">你在「咖啡厅」几乎只接受拉伸类 → 已减少力量卡；「趴地动作」连续被拒 2 次 → 本周先不发了；最常拒绝原因是 <b>正忙</b>，已把单次默认调到 3 分钟试试。</div>
+      </div>
+      <div class="tabs" id="recTabs">
+        <span class="tab active" data-f="all">全部</span>
+        <span class="tab" data-f="done">已完成</span>
+        <span class="tab" data-f="skip">拒绝</span>
+      </div>
+      <div class="rec-list" id="recList"></div>
+    </section>
   </div>
 
-<!-- 逻辑全在 breakcard.js（Yolanda 维护）。Claire 改本文件的 markup + CSS 即可。 -->
 <script src="breakcard.js"></script>
 </body>
 </html>
