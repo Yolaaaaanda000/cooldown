@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BreakCard · 把等待变成微健身</title>
+<style>
+  /* ===== 设计 tokens：暖色桌面 + 牛皮纸朱砂卡（Spark Garden 风）+ Clawd 珊瑚橙 ===== */
+  :root{
+    --sand:#efd9b4; --terra:#cd9168; --terra-deep:#9c5b48;
+    --paper:#f4e9d0; --paper-2:#ece0c2; --paper-edge:#dcc9a3;
+    --ink:#3a3122; --ink-soft:#7b6c50;
+    --cinnabar:#c4503a; --cinnabar-deep:#a5392a; --clawd:#cd6e58;
+    --screen:#2b2722; --screen-2:#211e1a;
+    --term:#a9c081; --term-amber:#e0b063; --term-dim:#7a7263;
+    --shadow:rgba(58,40,28,.30);
+    --serif:"Noto Serif SC","Songti SC","STSong","Source Han Serif SC",serif;
+    --mono:"SFMono-Regular",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ height:100%; overflow:hidden; }
+  body{
+    font-family:var(--serif); color:var(--ink);
+    background:#caa985;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  /* ===== 桌面舞台（固定坐标系，JS 缩放适配窗口） ===== */
+  .stage{
+    position:fixed; left:50%; top:50%;
+    width:940px; height:600px;
+    transform:translate(-50%,-50%) scale(1);
+    transform-origin:center;
+    border-radius:16px; overflow:hidden;
+    background:
+      radial-gradient(120% 80% at 50% -20%, rgba(255,244,224,.7), rgba(255,244,224,0) 60%),
+      linear-gradient(158deg, var(--sand) 0%, var(--terra) 56%, var(--terra-deep) 100%);
+    box-shadow:0 40px 90px -30px rgba(58,40,28,.6), 0 0 0 1px rgba(0,0,0,.08);
+    isolation:isolate;
+  }
+  .stage::before{ /* 纸纹/壁纸噪点 */
+    content:""; position:absolute; inset:0; pointer-events:none; opacity:.5; mix-blend-mode:soft-light;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  }
+
+  /* ===== 菜单栏 ===== */
+  .menubar{
+    position:absolute; top:0; left:0; right:0; height:26px; z-index:50;
+    display:flex; align-items:center; gap:18px; padding:0 14px;
+    background:rgba(255,250,242,.55); backdrop-filter:blur(8px);
+    border-bottom:1px solid rgba(255,255,255,.35);
+    font-size:12.5px; color:#5b4f3c; letter-spacing:.02em;
+  }
+  .menubar .brand{ font-weight:700; color:var(--cinnabar-deep); }
+  .menubar .m{ opacity:.7; }
+  .menubar .right{ margin-left:auto; display:flex; align-items:center; gap:14px; opacity:.8; }
+  .menubar .right .wifi{ letter-spacing:-1px; }
+
+  /* ===== 代码窗口（你正在等的那个 agent） ===== */
+  .win{
+    position:absolute; border-radius:12px; overflow:hidden;
+    box-shadow:0 26px 52px -20px var(--shadow), 0 0 0 1px rgba(0,0,0,.06);
+    transition:opacity .7s ease, filter .7s ease, transform .7s ease;
+  }
+  .win-bar{
+    height:30px; display:flex; align-items:center; padding:0 12px; gap:8px;
+    background:linear-gradient(#efe7d8,#e6dccb); border-bottom:1px solid rgba(0,0,0,.06);
+  }
+  .win-bar i{ width:11px; height:11px; border-radius:50%; }
+  .win-bar i.r{ background:#e2604f; } .win-bar i.y{ background:#dcae51; } .win-bar i.g{ background:#86a85c; }
+  .win-bar .t{ flex:1; text-align:center; font-family:var(--mono); font-size:11.5px; color:#8a7d66; margin-right:33px; }
+
+  .code-win{ left:60px; top:70px; width:480px; height:312px; }
+  .code-body{
+    height:calc(100% - 30px); background:linear-gradient(180deg,var(--screen),var(--screen-2));
+    padding:14px 16px; font-family:var(--mono); color:var(--term); font-size:12.5px; line-height:1.72;
+    position:relative; overflow:hidden;
+  }
+  .code-body .p{ color:var(--cinnabar); } .code-body .dim{ color:var(--term-dim); }
+  .code-body .ok{ color:var(--term); } .code-body .am{ color:var(--term-amber); }
+  .spin{ display:inline-block; animation:spin 1s steps(8) infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .cursor{ display:inline-block; width:7px; height:14px; background:var(--term); vertical-align:-2px; margin-left:1px; animation:blink 1s steps(1) infinite; }
+  @keyframes blink{ 50%{ opacity:0; } }
+  .fin{ color:var(--ok,#9fc07a); opacity:0; transition:opacity .5s ease; margin-top:6px; }
+  .fin .badge{ color:#0c0; color:#86a85c; font-weight:700; }
+  .stage[data-scene="wait"] .fin{ opacity:0; }
+  .stage:not([data-scene="wait"]) .fin{ opacity:1; }
+  .stage:not([data-scene="wait"]):not([data-scene="deal"]) .code-win{ opacity:.5; filter:saturate(.7) blur(1px); transform:scale(.985); }
+  .stage[data-scene="end"] .code-win{ opacity:.25; }
+
+  /* ===== Clawd（像素螃蟹，canvas 绘制，CSS 控位置） ===== */
+  #clawd{
+    position:absolute; z-index:30; width:154px; height:140px;
+    image-rendering:pixelated;
+    left:740px; top:392px;
+    transition:left .8s cubic-bezier(.2,.85,.25,1), top .8s cubic-bezier(.2,.85,.25,1), opacity .5s ease;
+    filter:drop-shadow(0 8px 6px rgba(58,40,28,.28));
+  }
+  .stage[data-scene="wait"]  #clawd{ left:752px; top:398px; }
+  .stage[data-scene="deal"]  #clawd{ left:690px; top:372px; }
+  .stage[data-scene="flip"]  #clawd{ left:700px; top:388px; }
+  .stage[data-scene="timer"] #clawd{ left:712px; top:388px; }
+  .stage[data-scene="done"]  #clawd{ left:690px; top:360px; }
+  .stage[data-scene="end"]   #clawd{ left:690px; top:360px; opacity:0; }
+  /* Clawd 名牌 */
+  .clawd-tag{
+    position:absolute; z-index:31; font-size:11px; color:#fff;
+    background:rgba(58,40,28,.55); padding:2px 9px; border-radius:10px; letter-spacing:.06em;
+    left:766px; top:520px; opacity:0; transition:opacity .5s ease;
+  }
+  .stage[data-scene="wait"] .clawd-tag{ opacity:.9; }
+
+  /* ===== BreakCard 浮窗（核心 hero 卡） ===== */
+  .card-wrap{
+    position:absolute; z-index:40; top:74px; left:470px;
+    width:300px; height:420px;
+    transform:translate(-50%, 60%) scale(.92) rotate(6deg); transform-origin:bottom center;
+    opacity:0; perspective:1400px;
+    transition:transform .85s cubic-bezier(.2,.85,.25,1), opacity .55s ease;
+  }
+  .stage[data-scene="deal"]  .card-wrap{ opacity:1; transform:translate(-50%, 2%) scale(1) rotate(-1.5deg); }
+  .stage[data-scene="flip"]  .card-wrap{ opacity:1; transform:translate(-50%, 0) scale(1) rotate(-.5deg); }
+  .stage[data-scene="timer"] .card-wrap{ opacity:1; transform:translate(-50%, 0) scale(1) rotate(0); }
+  .stage[data-scene="done"]  .card-wrap{ opacity:1; transform:translate(-50%, 0) scale(1) rotate(0); }
+  .stage[data-scene="end"]   .card-wrap{ opacity:0; transform:translate(-50%, -26%) scale(.9) rotate(2deg); }
+
+  .card{ position:relative; width:100%; height:100%; transform-style:preserve-3d; transition:transform .85s cubic-bezier(.6,.05,.2,1); }
+  .stage[data-scene="flip"] .card, .stage[data-scene="timer"] .card, .stage[data-scene="done"] .card{ transform:rotateY(180deg); }
+
+  .face{
+    position:absolute; inset:0; backface-visibility:hidden; border-radius:18px;
+    background:linear-gradient(135deg, rgba(255,255,255,.35), rgba(255,255,255,0) 40%), linear-gradient(180deg,var(--paper),var(--paper-2));
+    box-shadow:0 26px 46px -18px var(--shadow), 0 0 0 1px var(--paper-edge), 0 0 0 6px rgba(244,233,208,.92), 0 0 0 7px var(--paper-edge);
+    padding:22px 20px; overflow:hidden;
+  }
+  .face::after{ content:""; position:absolute; inset:11px; border-radius:12px; border:1.5px dashed rgba(122,108,80,.32); pointer-events:none; }
+
+  /* 牌背 */
+  .back{ display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:16px; }
+  .back .crest{ width:84px; height:64px; image-rendering:pixelated; }
+  .back .deckhint{ font-size:19px; letter-spacing:.3em; color:var(--cinnabar-deep); font-weight:700;
+    border-top:1.5px solid rgba(165,57,42,.3); border-bottom:1.5px solid rgba(165,57,42,.3); padding:9px 0; }
+  .back .sub{ font-size:12.5px; letter-spacing:.08em; color:var(--ink-soft); }
+
+  /* 卡正面 */
+  .front{ transform:rotateY(180deg); display:flex; flex-direction:column; }
+  .goal-pill{ align-self:flex-start; font-size:12px; letter-spacing:.12em; color:#fff; background:var(--cinnabar);
+    padding:4px 12px; border-radius:20px; box-shadow:0 2px 6px -2px var(--cinnabar-deep); }
+  .title{ margin-top:10px; display:flex; align-items:baseline; gap:10px; }
+  .title .zh{ font-size:33px; font-weight:800; letter-spacing:.04em; position:relative; }
+  .title .zh::after{ content:""; position:absolute; left:-2px; right:-2px; bottom:2px; height:8px;
+    background:rgba(196,80,58,.22); transform:skewX(-12deg) rotate(-1.2deg); z-index:-1; border-radius:4px; }
+  .title .en{ font-size:13px; color:var(--ink-soft); letter-spacing:.08em; }
+  .emoji-badge{ align-self:center; margin:8px 0 6px; width:90px; height:90px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:46px;
+    background:radial-gradient(circle at 35% 30%, #fff6e3, var(--paper-2));
+    box-shadow:0 6px 14px -6px var(--shadow), 0 0 0 2px rgba(196,80,58,.18), 0 0 0 7px rgba(244,233,208,.7); }
+  .keys{ font-size:13px; line-height:1.6; color:var(--ink); }
+  .keys b{ color:var(--cinnabar-deep); }
+  .guide{ margin-top:11px; border-radius:12px; background:rgba(196,80,58,.07); border:1.5px solid rgba(196,80,58,.22);
+    padding:9px 12px; display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:14px; }
+  .guide .sets{ font-weight:800; color:var(--cinnabar-deep); font-size:17px; }
+  .guide .rest{ color:var(--ink-soft); font-size:12.5px; } .guide .rest b{ color:var(--ink); }
+  .tags{ margin-top:9px; display:flex; gap:7px; }
+  .tags span{ font-size:11.5px; color:var(--ink-soft); border:1px solid var(--paper-edge); background:rgba(255,255,255,.4); padding:3px 10px; border-radius:14px; }
+
+  .timer{ margin-top:auto; display:flex; align-items:center; gap:14px; opacity:0; transform:translateY(10px);
+    transition:opacity .5s ease, transform .5s ease; }
+  .stage[data-scene="timer"] .timer, .stage[data-scene="done"] .timer{ opacity:1; transform:none; }
+  .timer .clock{ width:56px; height:56px; flex:0 0 auto; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    border:3px solid rgba(196,80,58,.25); box-shadow:0 0 0 4px rgba(244,233,208,.7) inset; animation:tick 1s ease-in-out infinite; }
+  @keyframes tick{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.06); } }
+  .timer .clock span{ font-size:22px; }
+  .timer .meta .big{ font-size:30px; font-weight:800; letter-spacing:.04em; font-variant-numeric:tabular-nums; }
+  .timer .meta .enc{ font-size:11.5px; color:var(--ink-soft); }
+
+  .done-veil{ position:absolute; inset:0; z-index:10; border-radius:18px;
+    background:linear-gradient(180deg, rgba(244,233,208,0) 30%, rgba(244,233,208,.98) 52%);
+    display:flex; align-items:flex-end; justify-content:center; padding-bottom:44px;
+    opacity:0; pointer-events:none; transition:opacity .5s ease; }
+  .stage[data-scene="done"] .done-veil{ opacity:1; }
+  .done-veil .check{ font-size:19px; color:var(--cinnabar-deep); font-weight:800; letter-spacing:.05em; }
+  .done-veil .check b{ font-size:25px; }
+
+  /* ===== 产品名卡（结尾） ===== */
+  .endcard{ position:absolute; inset:0; z-index:45; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
+    text-align:center; opacity:0; transform:scale(.96); pointer-events:none; transition:opacity .6s ease, transform .6s ease;
+    background:radial-gradient(72% 64% at 50% 48%, rgba(247,237,216,.94), rgba(247,237,216,.55) 70%, rgba(247,237,216,.2));
+    backdrop-filter:blur(3px); }
+  .stage[data-scene="end"] .endcard{ opacity:1; transform:none; }
+  .endcard .endcrab{ image-rendering:pixelated; width:112px; height:96px; margin-bottom:-8px; filter:drop-shadow(0 6px 5px rgba(58,40,28,.22)); }
+  .endcard h1{ font-size:46px; letter-spacing:.04em; color:#3a2b22; text-shadow:0 2px 0 rgba(255,255,255,.5); }
+  .endcard h1 b{ color:var(--cinnabar-deep); }
+  .endcard .rule{ width:54px; height:3px; background:var(--cinnabar-deep); opacity:.7; border-radius:3px; }
+  .endcard .tag{ font-size:18px; color:#4a3a2c; letter-spacing:.03em; line-height:1.8; }
+  .endcard .tag b{ color:var(--cinnabar-deep); }
+
+  /* ===== 底部字幕条（独立，绝不压卡片） ===== */
+  .subtitle{
+    position:absolute; left:0; right:0; bottom:16px; z-index:48; text-align:center; padding:0 24px;
+  }
+  .subtitle .line{ display:none; font-size:16px; color:#fff; letter-spacing:.02em;
+    background:rgba(45,32,22,.62); backdrop-filter:blur(4px); padding:9px 20px; border-radius:22px;
+    box-shadow:0 6px 18px -8px rgba(0,0,0,.5); }
+  .subtitle .line b{ color:#ffd9a0; }
+  .stage[data-scene="wait"]  .subtitle [data-for="wait"],
+  .stage[data-scene="deal"]  .subtitle [data-for="deal"],
+  .stage[data-scene="flip"]  .subtitle [data-for="flip"],
+  .stage[data-scene="timer"] .subtitle [data-for="timer"],
+  .stage[data-scene="done"]  .subtitle [data-for="done"],
+  .stage[data-scene="end"]   .subtitle [data-for="end"]{ display:inline-block; animation:subin .5s ease; }
+  @keyframes subin{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:none; } }
+
+  /* 重播 */
+  .replay{ position:absolute; left:14px; bottom:14px; z-index:60; width:32px; height:32px; border-radius:50%; cursor:pointer;
+    border:1px solid rgba(255,255,255,.5); background:rgba(255,250,242,.5); color:#5b4f3c; font-size:15px;
+    display:flex; align-items:center; justify-content:center; transition:transform .2s ease, color .2s ease; }
+  .replay:hover{ transform:rotate(-90deg); color:var(--cinnabar-deep); }
+</style>
+</head>
+<body>
+  <div class="stage" id="stage" data-scene="wait">
+
+    <!-- 菜单栏 -->
+    <div class="menubar">
+      <span class="brand">🦀 BreakCard</span>
+      <span class="m">文件</span><span class="m">编辑</span><span class="m">视图</span>
+      <span class="right"><span class="wifi">▮▮▮</span><span>100%</span><span>周六 14:32</span></span>
+    </div>
+
+    <!-- 代码窗口：正在跑的 agent -->
+    <div class="win code-win">
+      <div class="win-bar"><i class="r"></i><i class="y"></i><i class="g"></i><span class="t">claude — ~/aigym</span></div>
+      <div class="code-body">
+        <div><span class="p">›</span> claude <span class="dim">"实现抽卡浮窗的计时逻辑"</span></div>
+        <div class="dim">● 思考中…</div>
+        <div><span class="am"><span class="spin">⠋</span></span> 正在编译 build…</div>
+        <div>&nbsp;&nbsp;src/breakcard.js&nbsp;&nbsp;&nbsp;<span class="ok">✓</span></div>
+        <div>&nbsp;&nbsp;src/timer.js&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="am">…</span></div>
+        <div>&nbsp;&nbsp;bundling assets&nbsp;&nbsp;&nbsp;<span class="dim">…</span><span class="cursor"></span></div>
+        <div class="fin"><span class="badge">✓ 完成</span> · 42s — 跑完了，回来动一下？</div>
+      </div>
+    </div>
+
+    <!-- Clawd 像素螃蟹 -->
+    <canvas id="clawd" width="154" height="140"></canvas>
+    <div class="clawd-tag">Clawd · 你的桌宠教练</div>
+
+    <!-- BreakCard 浮窗 -->
+    <div class="card-wrap">
+      <div class="card">
+        <div class="face back">
+          <canvas class="crest" id="crest" width="84" height="64"></canvas>
+          <div class="deckhint">抽 一 张 · 动 5 分 钟</div>
+          <div class="sub">working → idle，Clawd 递给你一张卡</div>
+        </div>
+        <div class="face front">
+          <div class="goal-pill" id="goalPill">力量</div>
+          <div class="title"><div class="zh" id="zh">深蹲</div><div class="en" id="en">Squat</div></div>
+          <div class="emoji-badge" id="emoji">🏋️</div>
+          <div class="keys" id="keys"><b>要领</b>　脚与肩同宽，臀部向后坐，膝盖不超脚尖，背挺直。</div>
+          <div class="guide">
+            <div class="sets" id="sets">3 组 × 12 次</div>
+            <div class="rest">组间休息 <b id="rest">30s</b></div>
+          </div>
+          <div class="tags"><span id="tagGoal">力量</span><span id="tagPart">下肢</span></div>
+          <div class="timer">
+            <div class="clock"><span>⏱</span></div>
+            <div class="meta"><div class="big" id="clock">00:00</div><div class="enc">动起来，等它跑完不如等你练完</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="done-veil"><div class="check"><b>完成 ✓</b>　Clawd 给你比个心</div></div>
+    </div>
+
+    <!-- 结尾产品名卡 -->
+    <div class="endcard">
+      <canvas class="endcrab" id="endcrab" width="112" height="96"></canvas>
+      <h1>Break<b>Card</b></h1>
+      <div class="rule"></div>
+      <div class="tag">别的桌宠在你等的时候卖萌<br>这个把<b>等待</b>变成<b>微健身</b></div>
+    </div>
+
+    <!-- 底部字幕条 -->
+    <div class="subtitle">
+      <span class="line" data-for="wait">点下回车，<b>等 agent 跑</b>…… 然后你就开始刷手机了 📱</span>
+      <span class="line" data-for="deal">跑完那一刻，桌角的 <b>Clawd 递来一张卡</b></span>
+      <span class="line" data-for="flip">翻面 —— <b>抽到「深蹲」</b>，要领 / 组数 / 休息都在卡上</span>
+      <span class="line" data-for="timer">照着要领做，<b>秒表正着走 ↑</b>，做满你这一组</span>
+      <span class="line" data-for="done">做完，<b>Clawd 给你比个心</b> ❤️</span>
+      <span class="line" data-for="end">把等待的空窗，变成<b>动起来</b>的理由</span>
+    </div>
+
+    <div class="replay" id="replay" title="重播">↻</div>
+  </div>
+
+<script>
+  /* ===== 演示数据（延续 design/moves.json 真实文案；sets/rest 为新设定示例） ===== */
+  const MOVE = { goal:"力量", zh:"深蹲", en:"Squat", emoji:"🏋️", part:"下肢",
+    keys:"脚与肩同宽，臀部向后坐，膝盖不超脚尖，背挺直。", sets:"3 组 × 12 次", rest:"30s" };
+
+  const stage = document.getElementById('stage');
+
+  /* ---------- Clawd 像素引擎（取自 clawd-animation skill 的官方定义，license 干净） ---------- */
+  const CLAWD = { body:'#cd6e58', eye:'#000' };
+  const CLAWD_BODY = [
+    [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
+    [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
+    [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
+    [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
+    [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
+    [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
+    [0,0,0,1,0,1,0,0,1,0,1,0,0,0],
+    [0,0,0,1,0,1,0,0,1,0,1,0,0,0]
+  ];
+  const EYE_L={x:4,y:1}, EYE_R={x:9,y:1};
+  const EYES={ forward:{l:[0,0],r:[0,0]}, look_left:{l:[-1,0],r:[-1,0]}, look_down:{l:[0,1],r:[0,1]}, blink:null };
+  const HEART=[ [1,0,1,0,0],[1,1,1,1,0],[0,1,1,1,0],[0,0,1,0,0] ];
+
+  function makeCrab(canvas, cell){
+    const g = canvas.getContext('2d');
+    const CELL = cell;
+    function px(gx,gy,col){ g.fillStyle=col; g.fillRect(gx*CELL, gy*CELL, CELL, CELL); }
+    function drawBody(ox,oy,eyeVariant){
+      for(let r=0;r<8;r++) for(let c=0;c<14;c++) if(CLAWD_BODY[r][c]) px(ox+c, oy+r, CLAWD.body);
+      const ev = EYES[eyeVariant] ?? EYES.forward;
+      if(ev){ px(ox+EYE_L.x+ev.l[0], oy+EYE_L.y+ev.l[1], CLAWD.eye);
+              px(ox+EYE_R.x+ev.r[0], oy+EYE_R.y+ev.r[1], CLAWD.eye); }
+    }
+    function drawHeart(ox,oy,alpha){
+      g.save(); g.globalAlpha=alpha;
+      for(let r=0;r<4;r++) for(let c=0;c<5;c++) if(HEART[r][c]) px(ox+c, oy+r, '#c4503a');
+      g.restore();
+    }
+    return { g, canvas, px, drawBody, drawHeart, CELL };
+  }
+
+  // 牌背上的小 Clawd（静态）
+  const crest = makeCrab(document.getElementById('crest'), 4);
+  crest.drawBody(0, 0, 'forward');
+  // 结尾名卡的 Clawd logo（静态）
+  const endcrab = makeCrab(document.getElementById('endcrab'), 7);
+  endcrab.drawBody(1, 2, 'forward');
+
+  // 桌角的大 Clawd（动）
+  const clawd = makeCrab(document.getElementById('clawd'), 7);
+  let hearts = [];               // 比心粒子（done 场景）
+  const OX = 4, OY = 8;          // 身体在画布网格里的位置
+  let t0 = null;
+
+  function renderClawd(now){
+    if(t0===null) t0 = now;
+    const t = now - t0;
+    const scene = stage.dataset.scene;
+    const g = clawd.g; g.clearRect(0,0,clawd.canvas.width,clawd.canvas.height);
+
+    // 呼吸/弹跳
+    let bob = Math.round(Math.sin(t/520)*1);
+    if(scene==='done') bob = -Math.abs(Math.round(Math.sin(t/170)*5)); // 开心蹦
+    if(scene==='deal') bob = -Math.abs(Math.round(Math.sin(t/150)*4)); // 发现时小跳
+
+    // 眨眼 + 视线（卡片在 Clawd 左侧 → 看左下）
+    let eyes = 'forward';
+    if(scene==='deal'||scene==='flip'||scene==='timer') eyes='look_down';
+    if(scene==='wait' && (t%3400)>3250) eyes='blink';
+    if(scene!=='wait' && (t%4200)>4080) eyes='blink';
+
+    clawd.drawBody(OX, OY+bob, eyes);
+
+    // done：往上飘爱心（从头顶冒出、上升散开）
+    if(scene==='done'){
+      if((t%430) < 18) hearts.push({ x: OX+4.5+(Math.random()*7-3.5), y: OY-3, vy:-0.16, vx:(Math.random()-0.5)*0.05, life:1 });
+    } else if(scene!=='end'){ hearts = []; }
+    for(let i=hearts.length-1;i>=0;i--){
+      const h=hearts[i]; h.y+=h.vy; h.x+=h.vx; h.life-=0.011;
+      if(h.life<=0){ hearts.splice(i,1); continue; }
+      clawd.drawHeart(Math.round(h.x), Math.round(h.y), Math.min(1,h.life*1.5));
+    }
+    requestAnimationFrame(renderClawd);
+  }
+  requestAnimationFrame(renderClawd);
+
+  /* ---------- 镜头时间线（每幕加长，约 26s 循环） ---------- */
+  const SCENES = [
+    { name:'wait',  dur:4500 },
+    { name:'deal',  dur:4000 },
+    { name:'flip',  dur:3800 },
+    { name:'timer', dur:6000 },
+    { name:'done',  dur:4200 },
+    { name:'end',   dur:3800 },
+  ];
+  const clockEl = document.getElementById('clock');
+  let timeoutId=null, countRAF=null;
+
+  function fmt(s){ const m=Math.floor(s/60), ss=s%60; return String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0'); }
+  function startCountup(){ stopCountup(); let s0=null;
+    const tick=(t)=>{ if(s0===null)s0=t; clockEl.textContent=fmt(Math.floor((t-s0)/1000*26)); countRAF=requestAnimationFrame(tick); };
+    countRAF=requestAnimationFrame(tick); }
+  function stopCountup(){ if(countRAF)cancelAnimationFrame(countRAF); countRAF=null; }
+
+  function setScene(i){
+    const s=SCENES[i]; stage.dataset.scene=s.name;
+    if(s.name==='timer') startCountup(); else stopCountup();
+    timeoutId=setTimeout(()=>setScene((i+1)%SCENES.length), s.dur);
+  }
+  function run(){ clearTimeout(timeoutId); stopCountup(); setScene(0); }
+
+  /* 灌入演示数据 */
+  goalPill.textContent=MOVE.goal; tagGoal.textContent=MOVE.goal; zh.textContent=MOVE.zh; en.textContent=MOVE.en;
+  emoji.textContent=MOVE.emoji; tagPart.textContent=MOVE.part; keys.innerHTML='<b>要领</b>　'+MOVE.keys;
+  sets.textContent=MOVE.sets; rest.textContent=MOVE.rest;
+
+  document.getElementById('replay').addEventListener('click', run);
+
+  /* 自适应缩放 */
+  function fit(){ const s=Math.min(1,(window.innerWidth-28)/940,(window.innerHeight-28)/600);
+    stage.style.transform=`translate(-50%,-50%) scale(${s})`; }
+  window.addEventListener('resize', fit); fit();
+
+  run();
+</script>
+</body>
+</html>
