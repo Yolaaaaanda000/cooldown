@@ -1,0 +1,30 @@
+{
+  "_说明": "弹卡 / 提醒的时机映射 —— Claire 设计『什么情况 → 给什么干预』，引擎只读这里、不写死。字段含义见 design/README.md。改完需重启 app 生效。",
+  "interventions": {
+    "breakcard": {
+      "label": "抽卡微健身",
+      "_when": "agent 持续忙（thinking/working）超过 minBusySec 秒还没回 idle —— 说明你在干等一个长任务",
+      "minBusySec": 60,
+      "_note_minBusySec": "agent 连续忙够这么久才弹。短任务（<60s）不打扰。想 demo 时快点看到可临时调小（如 8）",
+      "cooldownMin": 30,
+      "_note_cooldownMin": "两次弹卡至少间隔这么多分钟，避免太频繁",
+      "skipDuringStates": ["notification", "error", "sleeping"],
+      "_note_skip": "这些状态下不弹：权限请求 / 报错 / 你已离开 —— 该你处理，不是运动时机",
+      "enabled": true
+    },
+    "sedentary": {
+      "label": "久坐提醒（站起来 / 喝水 / 看远方）",
+      "_when": "你连续 afterMin 分钟没离开座位",
+      "afterMin": 50,
+      "enabled": false,
+      "_note": "⏳ 引擎尚未实现，先占位设计 —— Claire 可先写文案与时长"
+    },
+    "gymPlan": {
+      "label": "今日健身房计划提醒",
+      "_when": "每天到 atTime 提醒今天的完整健身计划",
+      "atTime": "18:00",
+      "enabled": false,
+      "_note": "⏳ 引擎尚未实现，先占位设计"
+    }
+  }
+}

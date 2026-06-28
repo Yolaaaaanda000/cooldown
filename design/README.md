@@ -48,6 +48,26 @@
 
 ---
 
+## 你也可以改：`design/triggers.json`（弹卡「时机」）
+
+`moves.json` 决定**弹什么内容**，`triggers.json` 决定**什么时候弹**。引擎也只读这个文件。
+⚠️ 改完需重启 app 才生效（引擎启动时读一次）。
+
+现在生效的是 `breakcard`（抽卡微健身）这一组：
+
+| 字段 | 含义 | 现值 |
+|---|---|---|
+| `minBusySec` | agent 连续忙（thinking/working）满多少秒才弹，过滤短任务 | `60` |
+| `cooldownMin` | 两次弹卡至少间隔多少分钟，防太频繁 | `30` |
+| `skipDuringStates` | 这些状态下绝不弹（该你处理，不是运动时机） | `["notification","error","sleeping"]` |
+| `enabled` | 总开关 | `true` |
+
+> 调频率就改 `minBusySec` / `cooldownMin`。想 demo 快点看到效果，把 `minBusySec` 临时改 `8`、重启。
+
+另外两组 `sedentary`（久坐提醒）、`gymPlan`（今日计划）现在 `enabled: false`，**引擎还没实现**——你可以先把文案/时长设计好填进去占位，等引擎跟上。
+
+---
+
 ## 卡片的视觉/交互结构（现状，供你设计参照）
 
 当前流程是：**牌背 → 点「抽一张」→ 翻面出动作 → 点「开始 5 分钟」→ 环形倒计时 → 完成 → 螃蟹比心**。
