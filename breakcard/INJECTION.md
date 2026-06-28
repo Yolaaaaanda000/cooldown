@@ -118,7 +118,7 @@ ipcMain.on("breakcard-event", (_e, event) => {
   if (breakWin && !breakWin.isDestroyed()) breakWin.close();
   breakWin = null;
   if (event === "workout_done") {
-    setState("attention");   // 复用现成的庆祝/比心动画
+    setState("love");   // 专属比心动画（见下方「比心素材」）
   }
 });
 // ===== /BreakCard =====
@@ -181,6 +181,18 @@ function setState(newState, svgOverride, options = {}) {
 | `enabled` | 总开关 | `true` |
 
 ⚠️ 改完需**重启 app** 才生效（引擎启动时读一次）。
+
+---
+
+## 比心素材：`clawd-love.svg` —— 完成时螃蟹专属比心
+
+完成运动时引擎调 `setState("love")`，播放专属的「举爱心比心」动画（不是通用 happy）。两步，都在 clawd-on-desk 本地（属 AGPL 运行层，不入 aigym 仓库）：
+1. 放素材：`clawd-on-desk/assets/svg/clawd-love.svg`（像素螃蟹举着心跳爱心 + 小爱心上飘，复用 clawd-happy 的弹跳/眨眼）
+2. 注册状态：`themes/clawd/theme.json` 加
+   - `states.love = ["clawd-love.svg"]`
+   - `timings.minDisplay.love = 5000`、`timings.autoReturn.love = 5000`
+
+> 想单独预览：浏览器直接打开 `clawd-love.svg` 就能看动画。
 
 ---
 
