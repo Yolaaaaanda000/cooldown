@@ -1,5 +1,5 @@
 {
-  "_说明": "这份文件由 Claire 设计填充。引擎只读这里，不写死任何内容。字段含义见 design/README.md。下面的数据是占位示例，可全部替换。",
+  "_说明": "由 Claire 设计填充，引擎只读这里。本次升级为「场景盲盒抽卡」：新增 contexts(场景) 与每个动作的 tags(约束标签)，用来按场景过滤可做的动作。新增字段是增量的——老引擎忽略它们仍可按 goal 加权随机工作。新流程/结构变更详见 design/interaction-spec.md，字段含义见 design/README.md。",
 
   "goals": {
     "lose": "减脂",
@@ -7,20 +7,64 @@
     "stretch": "拉伸"
   },
 
+  "_contexts说明": "场景 = 一组约束上限。某动作的每个 tag 都 ≤ 该场景的 max 时，才会在这个场景被抽到。tag/max 四个维度都是 0..2，数字越小越克制：space 空间(0原地/1小范围/2需展开)、noise 声音(0静音/1轻微/2可出声)、social 社死度(0不易察觉/1正常/2随意)、posture 姿势(0坐着/1要站/2要趴躺)。想加新场景只需在这里加一条，不用改动作。",
+  "contexts": {
+    "office":  { "label": "🏢 办公室/工位", "max": { "space": 1, "noise": 0, "social": 0, "posture": 1 } },
+    "cafe":    { "label": "☕ 咖啡厅/公共", "max": { "space": 0, "noise": 0, "social": 0, "posture": 0 } },
+    "home":    { "label": "🏠 家里",        "max": { "space": 2, "noise": 2, "social": 2, "posture": 2 } },
+    "hallway": { "label": "🚶 走廊/茶水间", "max": { "space": 1, "noise": 1, "social": 1, "posture": 1 } }
+  },
+
   "config": {
     "defaultGoal": "strength",
+    "defaultContext": "office",
+    "drawCount": 6,
     "durationSec": 300,
     "deckHint": "抽 一 张 · 动 5 分 钟",
     "timerSub": "动起来，等它跑完不如等你练完",
     "doneText": "完成 ✓ 螃蟹给你比个心"
   },
 
+  "_doneMessages说明": "完成时随机展示一条激励语。引擎不写死文案，从这里取。",
+  "doneMessages": [
+    "动完这一下，螃蟹给你比个心 🦀💗",
+    "5 分钟偷回来了，这把心率你赢了",
+    "你的颈椎刚发来一条感谢",
+    "等它跑完不如等你练完——你做到了",
+    "又一张打卡入账，连续记录 +1"
+  ],
+
+  "_refuseReasons说明": "拒绝时给用户选的原因。引擎记录所选原因，喂给 AI 调整下次推荐。",
+  "refuseReasons": [
+    "正忙，这会儿不行",
+    "不在状态",
+    "这个动作不想做",
+    "环境不合适",
+    "待会儿再说"
+  ],
+
+  "_moves说明": "每个动作新增 tags(四维约束)。其余字段同前：zh/en/emoji/goal/part/desc。",
   "moves": [
-    { "zh": "开合跳", "en": "Jumping Jacks", "emoji": "🤸", "goal": "lose", "part": "全身", "desc": "全身有氧，快速升心率。等代码编译的 5 分钟正好。" },
-    { "zh": "高抬腿", "en": "High Knees", "emoji": "🏃", "goal": "lose", "part": "全身", "desc": "原地高抬腿，核心收紧，节奏快一点。" },
-    { "zh": "深蹲", "en": "Squat", "emoji": "🏋️", "goal": "strength", "part": "下肢", "desc": "脚与肩同宽，臀部向后坐，膝盖不超脚尖。" },
-    { "zh": "平板支撑", "en": "Plank", "emoji": "💪", "goal": "strength", "part": "核心", "desc": "肘撑地，身体一条直线，别塌腰别撅臀。" },
-    { "zh": "颈部放松", "en": "Neck Release", "emoji": "🧘", "goal": "stretch", "part": "颈肩", "desc": "久坐救星。缓慢转头、侧倾，别甩脖子。" },
-    { "zh": "踝泵+起立", "en": "Stand & Move", "emoji": "🚶", "goal": "stretch", "part": "全身", "desc": "站起来走两步，活动脚踝，喝口水。最低门槛。" }
+    { "zh": "颈部放松", "en": "Neck Release", "emoji": "🧘", "goal": "stretch", "part": "颈肩", "tags": { "space": 0, "noise": 0, "social": 0, "posture": 0 }, "desc": "久坐救星。缓慢转头、侧倾，每个方向停 3 秒，别甩脖子。" },
+    { "zh": "箱式呼吸", "en": "Box Breathing", "emoji": "🌬️", "goal": "stretch", "part": "呼吸", "tags": { "space": 0, "noise": 0, "social": 0, "posture": 0 }, "desc": "吸 4 拍、停 4 拍、呼 4 拍、停 4 拍。坐着闭眼也行。" },
+    { "zh": "脚踝泵", "en": "Ankle Pumps", "emoji": "🦶", "goal": "stretch", "part": "下肢", "tags": { "space": 0, "noise": 0, "social": 0, "posture": 0 }, "desc": "坐着把脚尖用力勾起再绷直，促进久坐后的下肢循环。" },
+    { "zh": "肩部环绕", "en": "Shoulder Rolls", "emoji": "🤷", "goal": "stretch", "part": "颈肩", "tags": { "space": 0, "noise": 0, "social": 0, "posture": 0 }, "desc": "双肩向后画大圈 10 次，再向前 10 次，打开含胸。" },
+    { "zh": "手腕拉伸", "en": "Wrist Stretch", "emoji": "🤚", "goal": "stretch", "part": "手腕", "tags": { "space": 0, "noise": 0, "social": 0, "posture": 0 }, "desc": "敲了一天键盘？手臂前伸，轻压手背与手指，左右各 20 秒。" },
+    { "zh": "坐姿收腹", "en": "Seated Ab Squeeze", "emoji": "🪑", "goal": "strength", "part": "核心", "tags": { "space": 0, "noise": 0, "social": 0, "posture": 0 }, "desc": "坐直，用力收紧腹部 5 秒再放松，重复。神不知鬼不觉。" },
+    { "zh": "远眺放松", "en": "Eye Rest 20-20", "emoji": "👀", "goal": "stretch", "part": "眼睛", "tags": { "space": 0, "noise": 0, "social": 0, "posture": 0 }, "desc": "看 6 米外的东西 20 秒，眨眼放松，给屏幕看疲的眼睛松绑。" },
+    { "zh": "坐姿提踵", "en": "Seated Calf Raise", "emoji": "🦵", "goal": "strength", "part": "下肢", "tags": { "space": 0, "noise": 0, "social": 0, "posture": 0 }, "desc": "坐着脚跟反复抬起落下，可在脚上压点重量，悄悄练小腿。" },
+    { "zh": "靠墙静蹲", "en": "Wall Sit", "emoji": "🧱", "goal": "strength", "part": "下肢", "tags": { "space": 1, "noise": 0, "social": 0, "posture": 1 }, "desc": "背贴墙下滑到大腿与地面平行，膝盖 90°，撑住别塌。" },
+    { "zh": "站姿提踵", "en": "Standing Calf Raise", "emoji": "🦵", "goal": "strength", "part": "下肢", "tags": { "space": 0, "noise": 0, "social": 0, "posture": 1 }, "desc": "站直，脚跟尽量抬高停 1 秒再落下，扶桌也行。" },
+    { "zh": "扩胸拉伸", "en": "Chest Opener", "emoji": "🙆", "goal": "stretch", "part": "胸背", "tags": { "space": 1, "noise": 0, "social": 0, "posture": 1 }, "desc": "双手体后十指相扣，挺胸向上提，把含胸驼背拉开。" },
+    { "zh": "站姿颈肩拉伸", "en": "Standing Neck Stretch", "emoji": "🧎", "goal": "stretch", "part": "颈肩", "tags": { "space": 0, "noise": 0, "social": 0, "posture": 1 }, "desc": "一手轻扶头顶往侧拉，感受颈侧延展，两边各 20 秒。" },
+    { "zh": "原地踏步", "en": "March in Place", "emoji": "🚶", "goal": "lose", "part": "全身", "tags": { "space": 1, "noise": 1, "social": 1, "posture": 1 }, "desc": "原地踏步、摆臂，节奏快一点，3 分钟就微微出汗。" },
+    { "zh": "靠墙俯卧撑", "en": "Wall Push-up", "emoji": "🧱", "goal": "strength", "part": "上肢", "tags": { "space": 1, "noise": 0, "social": 1, "posture": 1 }, "desc": "面墙站，双手撑墙做俯卧撑，比地面版友好，练胸臂。" },
+    { "zh": "弓步蹲", "en": "Lunge", "emoji": "🦵", "goal": "strength", "part": "下肢", "tags": { "space": 2, "noise": 0, "social": 1, "posture": 1 }, "desc": "向前迈一大步下蹲，后膝近地，左右交替，练腿臀。" },
+    { "zh": "开合跳", "en": "Jumping Jacks", "emoji": "🤸", "goal": "lose", "part": "全身", "tags": { "space": 1, "noise": 2, "social": 2, "posture": 1 }, "desc": "全身有氧，快速升心率。等代码编译的 5 分钟正好。" },
+    { "zh": "高抬腿", "en": "High Knees", "emoji": "🏃", "goal": "lose", "part": "全身", "tags": { "space": 1, "noise": 2, "social": 2, "posture": 1 }, "desc": "原地高抬腿，核心收紧，节奏快一点，燃脂利器。" },
+    { "zh": "平板支撑", "en": "Plank", "emoji": "💪", "goal": "strength", "part": "核心", "tags": { "space": 2, "noise": 0, "social": 1, "posture": 2 }, "desc": "肘撑地，身体一条直线，别塌腰别撅臀，撑住。" },
+    { "zh": "俯卧撑", "en": "Push-up", "emoji": "🙇", "goal": "strength", "part": "上肢", "tags": { "space": 2, "noise": 0, "social": 1, "posture": 2 }, "desc": "标准或跪姿都行，下放至胸近地，稳稳推起。" },
+    { "zh": "臀桥", "en": "Glute Bridge", "emoji": "🌉", "goal": "strength", "part": "臀", "tags": { "space": 2, "noise": 0, "social": 1, "posture": 2 }, "desc": "仰卧屈膝，臀部发力顶起再落下，久坐臀的解药。" },
+    { "zh": "波比跳", "en": "Burpee", "emoji": "🔥", "goal": "lose", "part": "全身", "tags": { "space": 2, "noise": 2, "social": 2, "posture": 2 }, "desc": "深蹲—撑地—跳起，全身高强度，想爆汗就它。" }
   ]
 }
