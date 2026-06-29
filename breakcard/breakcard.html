@@ -50,11 +50,14 @@
     border-radius:14px;
     box-shadow:9px 9px 0 var(--ink);
     overflow:hidden;
+    /* 固定为窗口高度（窗口固定 720、不可缩放）；所有页统一高度，超长内容在当前 screen 内部滚动 */
+    display:flex; flex-direction:column; height:calc(100vh - 32px);
   }
   .titlebar{
     display:flex; align-items:center; gap:9px;
     padding:13px 18px; background:var(--pink);
     border-bottom:4px solid var(--ink);
+    flex:none;                          /* 标题栏（含 ✕ 关闭）始终固定，不随内容滚走 */
   }
   .titlebar .crab{ font-size:20px; }
   .titlebar .name{ font-size:15px; font-weight:900; letter-spacing:.3px; color:#fff;
@@ -68,7 +71,8 @@
     font-size:13px; font-weight:900; cursor:pointer; box-shadow:2px 2px 0 var(--ink);}
 
   .screen{ display:none; padding:18px 20px 22px; min-height:548px; }
-  .screen.active{ display:block; animation:fadeIn .3s ease; }
+  /* 撑满固定高度（flex:1）；内容超出窗口就在此处内部滚动（min-height:0 让 flex 子项可收缩从而触发滚动） */
+  .screen.active{ display:block; animation:fadeIn .3s ease; flex:1 1 auto; min-height:0; overflow-y:auto; }
   @keyframes fadeIn{ from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none} }
 
   /* ================= ① 抽卡主界面 ================= */
